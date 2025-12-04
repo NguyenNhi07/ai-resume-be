@@ -36,25 +36,92 @@ model User {
   id                 Int          @id @default(autoincrement())
   email              String       @unique
   password           String
-  temporaryPassword  String?
-  firstName          String
-  lastName           String
   fullName           String
   phoneNumber        String?
-  status             UserStatus   @default(Active)
-  dob                DateTime?
-  role               UserRole
-  gender             Gender       @default(Other)
+  gender             String?      
   address            String?
-  city               String?
-  country            String?
-  imageLink          String?
-  lastActive         DateTime?
-  forceResetPassword Boolean      @default(false)
-  language           UserLanguage @default(En)
+  profession         String?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
   isDeleted          Boolean      @default(false)
+  
+  // Relationships
+  resumes            Resume[]
+}
+
+model Resume {
+  id              Int          @id @default(autoincrement())
+  userId          Int?
+  avatar          String?
+  name            String
+  dateOfBirth     String?
+  gender          String?
+  email           String
+  phoneNumber     String?
+  address         String?
+  profession      String?
+  language        String?
+  website         String[]
+  professional    String?
+  summary         String?
+  skills          String[]
+  isPublic        Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  isDeleted       Boolean      @default(false)
+  
+  // Relationships
+  user            User?        @relation(fields: [userId], references: [id])
+  experiences     Experience[]
+  educations      Education[]
+  projects        Project[]
+}
+
+model Experience {
+  id              Int          @id @default(autoincrement())
+  resumeId        Int
+  companyName     String
+  jobTitle        String
+  startDate       DateTime
+  endDate         DateTime?
+  isCurrent       Boolean      @default(false)
+  jobDescription  String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  isDeleted       Boolean      @default(false)
+  
+  // Relationships
+  resume          Resume       @relation(fields: [resumeId], references: [id])
+}
+
+model Education {
+  id              Int          @id @default(autoincrement())
+  resumeId        Int
+  institutionName String
+  degree          String
+  fieldOfStudy    String?
+  graduationDate  DateTime
+  gpa             String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  isDeleted       Boolean      @default(false)
+  
+  // Relationships
+  resume          Resume       @relation(fields: [resumeId], references: [id])
+}
+
+model Project {
+  id              Int          @id @default(autoincrement())
+  resumeId        Int
+  projectName     String
+  description     String?
+  technologies    String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  isDeleted       Boolean      @default(false)
+  
+  // Relationships
+  resume          Resume       @relation(fields: [resumeId], references: [id])
 }
 
 model Storage {
