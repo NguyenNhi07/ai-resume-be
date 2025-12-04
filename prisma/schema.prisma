@@ -1,0 +1,198 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = []
+  binaryTargets   = ["native", "linux-arm64-openssl-3.0.x"]
+}
+
+generator dbml {
+  provider = "prisma-dbml-generator"
+}
+
+generator prisma-class-generator {
+  provider                 = "prisma-class-generator"
+  dryRun                   = "false"
+  output                   = "dtos"
+  useSwagger               = "true"
+  makeIndexFile            = "true"
+  separateRelationFields   = "true"
+  clientImportPath         = "@prisma/client"
+  useNonNullableAssertions = "false"
+  preserveDefaultNullable  = "false"
+}
+
+// -------------------------------- Models ------------------------------
+model User {
+  id                 Int          @id @default(autoincrement())
+  email              String       @unique
+  password           String
+  temporaryPassword  String?
+  firstName          String
+  lastName           String
+  fullName           String
+  phoneNumber        String?
+  status             UserStatus   @default(Active)
+  dob                DateTime?
+  role               UserRole
+  gender             Gender       @default(Other)
+  address            String?
+  city               String?
+  country            String?
+  imageLink          String?
+  lastActive         DateTime?
+  forceResetPassword Boolean      @default(false)
+  language           UserLanguage @default(En)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  isDeleted          Boolean      @default(false)
+}
+
+model Storage {
+  id           Int      @id @default(autoincrement())
+  userId       Int?
+  filename     String   @unique
+  path         String
+  mimetype     String?
+  size         Int
+  originalname String
+  encoding     String?
+  destination  String?
+  epicId       Int?
+  storyId      Int?
+  taskId       Int?
+  subTaskId    Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  isDeleted    Boolean  @default(false)
+}
+
+model AuditTrail {
+  id        Int            @id @default(autoincrement())
+  userId    Int
+  before    Json
+  after     Json?
+  diffs     Json?
+  type      AuditTrailType
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  isDeleted Boolean        @default(false)
+}
+
+model History {
+  id        Int         @id @default(autoincrement())
+  userId    Int
+  condition Json
+  content   Json
+  type      HistoryType
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  isDeleted Boolean     @default(false)
+}
+
+// -------------------------------- Enums -------------------------------
+enum UserRole {
+  Admin
+  Leader
+  Staff
+}
+
+enum ProjectRole {
+  PM
+  Developer
+  Tester
+}
+
+enum WorkingStatus {
+  Active
+  OnLeave
+  Inactive
+}
+
+// enum TeamRole {
+//   TeamLead
+//   Frontend
+//   Backend
+// }
+
+enum ProjectPrivacy {
+  Public
+  Private
+}
+
+enum ProjectStatus {
+  Planned
+  Active
+  Completed
+  Archived
+}
+
+enum UserStatus {
+  Active
+  Inactive
+  Closed
+}
+
+enum WorkStatus {
+  Todo
+  Development
+  InProgress
+  DoneTesting
+  Review
+  Done
+}
+
+enum LabelType {
+  Design
+  API
+  Dev
+  Bug
+  Planning
+}
+
+enum Priority {
+  Low
+  Medium
+  High
+}
+
+// enum LinkType {
+//   RelatesTo
+//   IsBlockedBy
+//   Blocks
+//   IsCausedBy
+//   Causes
+//   Duplicates
+//   IsDuplicatedBy
+//   Resolves
+//   IsResolvedBy
+//   Clones
+// }
+
+enum Gender {
+  Male
+  Female
+  Other
+}
+
+enum UserLanguage {
+  En
+  Vn
+}
+
+enum AuditTrailType {
+  Update
+}
+
+enum HistoryType {
+  Update
+}

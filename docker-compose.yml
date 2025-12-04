@@ -1,0 +1,53 @@
+services:
+  api:
+    container_name: backend-api
+    image: backend-image
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./logs:/api/logs
+      - ./database-backups:/api/prisma/backups
+      - ./uploads:/api/uploads
+    networks:
+      - backend-network
+
+  database:
+    image: postgres:16
+    container_name: backend-database
+    environment:
+      POSTGRES_USER: ${PG_USER:-postgres}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-postgres}
+      POSTGRES_DB: ${PG_DATABASE:-backend}
+    env_file:
+      - .env
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    volumes:
+      - backend-db-volumes:/var/lib/postgresql/data
+    networks:
+      - backend-network
+
+  redis:
+    image: redis:7
+    container_name: backend-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - backend-redis-volumes:/data
+    networks:
+      - backend-network
+
+volumes:
+  backend-db-volumes:
+    driver: local
+  backend-redis-volumes:
+    driver: local
+
+networks:
+  backend-network:
+    driver: bridge

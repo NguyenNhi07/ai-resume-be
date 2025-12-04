@@ -1,0 +1,14 @@
+import { isDefined } from 'class-validator';
+
+export function combineString(strings: string[], separator = ' ') {
+  return strings.map((value) => isDefined(value)).join(separator);
+}
+
+export function generateRandomString(length: number): string {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+}
