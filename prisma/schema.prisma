@@ -36,10 +36,22 @@ model User {
   id                 Int          @id @default(autoincrement())
   email              String       @unique
   password           String
+  temporaryPassword  String?
+  firstName          String
+  lastName           String
   fullName           String
   phoneNumber        String?
-  gender             String?      
+  status             UserStatus   @default(Active)
+  dob                DateTime?
+  role               UserRole
+  gender             Gender       @default(Other)
   address            String?
+  city               String?
+  country            String?
+  imageLink          String?
+  lastActive         DateTime?
+  forceResetPassword Boolean      @default(false)
+  language           UserLanguage @default(En)
   profession         String?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt

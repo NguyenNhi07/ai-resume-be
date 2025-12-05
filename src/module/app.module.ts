@@ -14,6 +14,7 @@ import { BaseModule } from 'src/module/base';
 import { StorageModule } from 'src/module/storage';
 import { SystemModule } from 'src/module/system/system.module';
 import { UserModule } from 'src/module/user';
+import { ResumeModule } from 'src/module/resume';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { UserModule } from 'src/module/user';
     UserModule,
     SystemModule,
     StorageModule,
+    ResumeModule,
     // Business logic module
   ],
 })
