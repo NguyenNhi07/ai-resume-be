@@ -14,7 +14,7 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AccessRole } from 'src/common/enums';
 import { PaginationResponseDto } from '@server/platform/dtos';
-import { RoleBaseAccessControl, SwaggerApiDocument } from 'src/decorator';
+import { RoleBaseAccessControl, SwaggerApiDocument, User } from 'src/decorator';
 import { AuthGuard } from 'src/guard';
 import { ResumeService } from './resume.service';
 import {
@@ -30,7 +30,7 @@ import {
 @Controller('resume')
 @ApiTags('Resume')
 @UseGuards(AuthGuard)
-@RoleBaseAccessControl([])
+@RoleBaseAccessControl(true)
 @ApiBearerAuth()
 export class ResumeController {
   constructor(private readonly resumeService: ResumeService) {}
@@ -45,9 +45,10 @@ export class ResumeController {
     },
   })
   async createResume(
+    @User('id') userId: number,
     @Body() body: CreateResumeBodyDto,
   ): Promise<CreateResumeResponseDto> {
-    return this.resumeService.createResume(body);
+    return this.resumeService.createResume(userId, body);
   }
 
   @Get()

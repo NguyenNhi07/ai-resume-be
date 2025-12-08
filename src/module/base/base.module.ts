@@ -33,17 +33,22 @@ import { PermissionService } from './permission.service';
       },
       preview: false,
     }),
-    RedisModule,
+    // RedisModule,
   ],
   providers: [
     PermissionService,
     DatabaseService,
     EmailService,
     HttpService,
-    RedisService,
+    // RedisService,
     // utils classes
     UserUtil,
   ],
-  exports: [DatabaseService, EmailService, HttpService, UserUtil, RedisService],
+  exports: [DatabaseService,
+    EmailService,
+    HttpService,
+    UserUtil,
+    // RedisService
+  ],
 })
-export class BaseModule {}
+export class BaseModule { }

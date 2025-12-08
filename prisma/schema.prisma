@@ -65,10 +65,10 @@ model Resume {
   id           Int      @id @default(autoincrement())
   userId       Int?
   avatar       String?
-  name         String
-  dateOfBirth  String?
-  gender       String?
-  email        String
+  name         String?
+  dateOfBirth  DateTime?
+  gender       Gender?
+  email        String?
   phoneNumber  String?
   address      String?
   profession   String?

@@ -20,37 +20,42 @@ import {
 export class ResumeService {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async createResume(body: CreateResumeBodyDto): Promise<CreateResumeResponseDto> {
+  async createResume(userId: number, body: CreateResumeBodyDto): Promise<CreateResumeResponseDto> {
     return this.databaseService.resume.create({
-      data: { ...body },
+      data: { ...body, userId },
     });
-  }
+  };
 
   async getResumeList(query: GetResumeListQueryDto): Promise<PaginationResponseDto<GetResumeListResponseDto>> {
     const { page, pageSize, take, skip } = validatePaginationQueryDto(query);
     
     const where: Prisma.ResumeWhereInput = {
-      ...(query.id && { id: query.id }),
-      ...(query.userId && { userId: query.userId }),
-      ...(query.avatar && { avatar: query.avatar }),
-      ...(query.name && { name: query.name }),
-      ...(query.dateOfBirth && { dateOfBirth: query.dateOfBirth }),
-      ...(query.gender && { gender: query.gender }),
-      ...(query.email && { email: query.email }),
-      ...(query.phoneNumber && { phoneNumber: query.phoneNumber }),
-      ...(query.address && { address: query.address }),
-      ...(query.profession && { profession: query.profession }),
-      ...(query.language && { language: query.language }),
-      ...(query.professional && { professional: query.professional }),
-      ...(query.summary && { summary: query.summary }),
-      ...(query.isPublic && { isPublic: query.isPublic }),
+      // ...(query.id && { id: query.id }),
+      // ...(query.userId && { userId: query.userId }),
+      // ...(query.avatar && { avatar: query.avatar }),
+      // ...(query.name && { name: query.name }),
+      // ...(query.dateOfBirth && { dateOfBirth: query.dateOfBirth }),
+      // ...(query.gender && { gender: query.gender }),
+      // ...(query.email && { email: query.email }),
+      // ...(query.phoneNumber && { phoneNumber: query.phoneNumber }),
+      // ...(query.address && { address: query.address }),
+      // ...(query.profession && { profession: query.profession }),
+      // ...(query.language && { language: query.language }),
+      // // ...(query.website && { website: query.website }),
+      // ...(query.professional && { professional: query.professional }),
+      // ...(query.summary && { summary: query.summary }),
+      // // ...(query.skills && { skills: query.skills }),
+      // // ...(query.experiences && { experiences: query.experiences }),
+      // // ...(query.educations && { educations: query.educations }),
+      // // ...(query.projects && { projects: query.projects }),
+      // ...(query.isPublic && { isPublic: query.isPublic }),
     };
     if (query.createdAtRangeStart || query.createdAtRangeEnd) {
       where.createdAt = {
         gte: query.createdAtRangeStart,
         lte: query.createdAtRangeEnd,
       };
-    }
+    };
 
     const [data, total] = await Promise.all([
       this.databaseService.resume.findMany({
