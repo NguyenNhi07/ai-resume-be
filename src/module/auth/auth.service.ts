@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma, UserStatus } from '@prisma/client';
+import { Prisma, UserRole, UserStatus } from '@prisma/client';
 import { AsyncStorage } from '@server/async-storage';
 import { ServerConfig } from '@server/config';
 import { bcrypt } from '@server/libs/bcrypt';
@@ -18,6 +18,9 @@ import {
   LoginBodyDto,
   LoginResponseDto,
   RefreshTokenResponseDto,
+  SignupBodyDto,
+  SignupResponseDto,
+  LogoutResponseDto,
 } from './dtos';
 
 @Injectable()
@@ -48,38 +51,48 @@ export class AuthService {
     });
   }
 
-  // async signup(body: SignupBodyDto): Promise<SignupResponseDto> {
-  //   const { email } = body;
-  //   const existingUser = await this.databaseService.user.findFirst({
-  //     where: { email },
-  //   });
-  //   if (existingUser) {
-  //     throw new ServerException(ERROR_RESPONSE.USER_ALREADY_EXISTS);
-  //   }
-  //
-  //   const hashedPassword = await bcrypt.hash(
-  //     body.password,
-  //     ServerConfig.get().BCRYPT_SALT_ROUNDS,
-  //   );
-  //
-  //   const newUser = await this.databaseService.user.create({
-  //     data: {
-  //       ...body,
-  //       fullName: `${body.firstName} ${body.lastName}`,
-  //       password: hashedPassword,
-  //       role: UserRole.Staff,
-  //     },
-  //     select: USER_DEFAULT_SELECT,
-  //   });
-  //
-  //   return this.provideTokenCredential({
-  //     userId: newUser.id,
-  //     role: newUser.role,
-  //   });
-  // }
+  public async signup(body: SignupBodyDto): Promise<SignupResponseDto> {
+    const { email, name, dob } = body;
+
+    const existingUser = await this.databaseService.user.findFirst({
+      where: { email },
+    });
+    if (existingUser) {
+      throw new ServerException(ERROR_RESPONSE.USER_ALREADY_EXISTS);
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      body.password,
+      ServerConfig.get().BCRYPT_SALT_ROUNDS,
+    );
+
+    const newUser = await this.databaseService.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        firstName: name,
+        lastName: '',
+        fullName: name.trim(),
+        dob,
+        role: UserRole.Staff,
+      },
+      select: USER_DEFAULT_SELECT,
+    });
+
+    return this.provideTokenCredential({
+      userId: newUser.id,
+      role: newUser.role,
+    });
+  }
 
   public async refreshToken(user: UserJwtPayload): Promise<RefreshTokenResponseDto> {
     return this.provideTokenCredential({ ...user });
+  }
+
+  public async logout(): Promise<LogoutResponseDto> {
+    // Stateless JWT: nothing to revoke on server for now.
+    // If refresh tokens are stored in DB/Redis later, revoke them here.
+    return {};
   }
 
   private async findUserOrThrow(where: Prisma.UserWhereInput) {

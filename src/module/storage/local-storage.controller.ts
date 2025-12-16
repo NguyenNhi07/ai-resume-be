@@ -25,7 +25,7 @@ import { LocalStorageService } from './local-storage.service';
 @Controller('storage/local')
 @ApiTags('Local Storage')
 @UseGuards(AuthGuard)
-@RoleBaseAccessControl([AccessRole.Admin])
+@RoleBaseAccessControl(true) // allow any authenticated user role
 @ApiBearerAuth()
 export class LocalStorageController {
   private static readonly storage = diskStorage({

@@ -109,8 +109,9 @@ export class ProjectDto {
     type: String,
     required: false,
     validated: true,
+    structure: 'array',
   })
-  technologies: string
+  technologies: string[] & JsonValue[]
 }
 
 
@@ -122,6 +123,9 @@ export class BaseResumeResponseDto {
 
   @PropertyDto()
   userId: number;
+
+  @PropertyDto()
+  title: string;
 
   @PropertyDto()
   avatar: string;
@@ -333,9 +337,20 @@ export class CreateResumeBodyDto {
     type: String,
     required: false,
     validated: true,
+    example: 'My Awesome CV',
+  })
+  title: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
     example: `https://upload.wikimedia.org/wikipedia/en/5/5f/Original_Doge_meme.jpg`
   })
-  @IsUrl()
+  @IsUrl({
+    require_tld: false,
+    require_protocol: true,
+  })
   avatar: string;
 
   @PropertyDto({
@@ -402,11 +417,13 @@ export class CreateResumeBodyDto {
     type: String,
     required: false,
     validated: true,
-    structure: 'array',
-    example: ['fb.com', 'sotatek.com']
+    example: 'https://example.com'
   })
-  @IsUrl({}, { each: true })
-  website: string[];
+  @IsUrl({
+    require_tld: false, // allow localhost / internal domains
+    require_protocol: true,
+  })
+  website: string;
 
   @PropertyDto({
     type: String,

@@ -14,6 +14,9 @@ import {
   LoginBodyDto,
   LoginResponseDto,
   RefreshTokenResponseDto,
+  SignupBodyDto,
+  SignupResponseDto,
+  LogoutResponseDto,
 } from './dtos';
 
 @Controller('auth')
@@ -37,19 +40,19 @@ export class AuthController {
     return this.authService.login(body);
   }
 
-  // @Post('signup')
-  // @SwaggerApiDocument({
-  //   response: { type: SignupResponseDto },
-  //   body: { type: SignupBodyDto, required: true },
-  //   operation: {
-  //     operationId: `signup`,
-  //     summary: `Api signup`,
-  //   },
-  // })
-  // @RoleBaseAccessControl(AccessRole.Public)
-  // async signup(@Body() body: SignupBodyDto): Promise<SignupResponseDto> {
-  //   return this.authService.signup(body);
-  // }
+  @Post('signup')
+  @SwaggerApiDocument({
+    response: { type: SignupResponseDto },
+    body: { type: SignupBodyDto, required: true },
+    operation: {
+      operationId: `signup`,
+      summary: `Api signup`,
+    },
+  })
+  @RoleBaseAccessControl(AccessRole.Public)
+  async signup(@Body() body: SignupBodyDto): Promise<SignupResponseDto> {
+    return this.authService.signup(body);
+  }
 
   @Post('forget-password')
   @SwaggerApiDocument({
@@ -99,5 +102,19 @@ export class AuthController {
     @User() userPayload: UserJwtPayload,
   ): Promise<RefreshTokenResponseDto> {
     return this.authService.refreshToken(userPayload);
+  }
+
+  @Post('logout')
+  @SwaggerApiDocument({
+    response: { type: LogoutResponseDto },
+    operation: {
+      operationId: `logout`,
+      summary: `Api logout`,
+    },
+  })
+  @RoleBaseAccessControl(true)
+  @ApiBearerAuth()
+  async logout(): Promise<LogoutResponseDto> {
+    return this.authService.logout();
   }
 }

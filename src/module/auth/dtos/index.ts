@@ -57,17 +57,9 @@ export class SignupBodyDto {
     type: String,
     required: true,
     validated: true,
-    example: 'John',
+    example: 'John Doe',
   })
-  firstName: string;
-
-  @PropertyDto({
-    type: String,
-    required: true,
-    validated: true,
-    example: 'Due',
-  })
-  lastName: string;
+  name: string;
 
   @PropertyDto({
     type: Date,
@@ -89,3 +81,6 @@ export class ChangePasswordBodyDto extends LoginBodyDto {}
 
 // ******************************  RefreshToken ******************************
 export class RefreshTokenResponseDto extends LoginResponseDto {}
+
+// ******************************  Logout ******************************
+export class LogoutResponseDto {}

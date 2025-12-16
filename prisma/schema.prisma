@@ -64,6 +64,7 @@ model User {
 model Resume {
   id           Int      @id @default(autoincrement())
   userId       Int?
+  title        String?
   avatar       String?
   name         String?
   dateOfBirth  DateTime?

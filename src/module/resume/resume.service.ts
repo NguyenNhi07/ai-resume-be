@@ -21,8 +21,13 @@ export class ResumeService {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async createResume(userId: number, body: CreateResumeBodyDto): Promise<CreateResumeResponseDto> {
+    const { website, ...rest } = body as any;
     return this.databaseService.resume.create({
-      data: { ...body, userId },
+      data: {
+        ...rest,
+        ...(website ? { website: Array.isArray(website) ? website : [website] } : {}),
+        userId,
+      },
     });
   };
 
@@ -85,9 +90,15 @@ export class ResumeService {
     if (!resume) {
       throw new ServerException(ERROR_RESPONSE.RESOURCE_NOT_FOUND);
     }
+    const { website, ...rest } = body as any;
     return this.databaseService.resume.update({
       where: { id },
-      data: { ...body },
+      data: {
+        ...rest,
+        ...(website !== undefined
+          ? { website: Array.isArray(website) ? website : [website] }
+          : {}),
+      },
     });
   }
 
