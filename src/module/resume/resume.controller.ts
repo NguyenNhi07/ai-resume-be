@@ -10,8 +10,11 @@ import {
   Put,
   Query,
   UseGuards,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
 import { AccessRole } from 'src/common/enums';
 import { PaginationResponseDto } from '@server/platform/dtos';
 import { RoleBaseAccessControl, SwaggerApiDocument, User } from 'src/decorator';
@@ -109,5 +112,28 @@ export class ResumeController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteResume(@Param('id') id: number): Promise<void> {
     await this.resumeService.deleteResume(id);
+  }
+
+  @Get(':id/pdf')
+  @SwaggerApiDocument({
+    response: {
+      type: StreamableFile,
+      description: 'Resume PDF file',
+    },
+    operation: {
+      operationId: `downloadResumePdf`,
+      summary: `Api downloadResumePdf`,
+    },
+  })
+  async downloadResumePdf(
+    @Param('id') id: number,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const buffer = await this.resumeService.exportResumePdf(id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="resume-${id}.pdf"`,
+    });
+    return new StreamableFile(buffer);
   }
 }
