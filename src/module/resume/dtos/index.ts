@@ -179,6 +179,15 @@ export class BaseResumeResponseDto {
   projects: any;
 
   @PropertyDto()
+  template: string;
+
+  @PropertyDto()
+  accentColor: string;
+
+  @PropertyDto()
+  fontFamily: string;
+
+  @PropertyDto()
   isPublic: boolean;
 
   @PropertyDto()
@@ -470,6 +479,30 @@ export class CreateResumeBodyDto {
     structure: 'dtoArray'
   })
   projects: ProjectDto[] & JsonValue[];
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+    example: 'classic',
+  })
+  template: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+    example: '#3B82F6',
+  })
+  accentColor: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+    example: 'inter',
+  })
+  fontFamily: string;
 
   @PropertyDto({
     type: Boolean,

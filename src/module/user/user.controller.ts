@@ -24,6 +24,8 @@ import {
   GetUserListResponseDto,
   UpdateUserBodyDto,
   UpdateUserResponseDto,
+  UpdateMyProfileBodyDto,
+  ChangePasswordBodyDto,
 } from './dtos';
 import { UserService } from './user.service';
 
@@ -80,6 +82,45 @@ export class UserController {
   @RoleBaseAccessControl(true)
   async getMyInformation(@User('id') id: number): Promise<GetUserDetailResponseDto> {
     return this.userService.getUserDetail(id);
+  }
+
+  @Put('me')
+  @SwaggerApiDocument({
+    response: {
+      type: GetUserDetailResponseDto,
+    },
+    body: { type: UpdateMyProfileBodyDto, required: true },
+    operation: {
+      operationId: `updateMyProfile`,
+      summary: `Api updateMyProfile`,
+    },
+  })
+  @RoleBaseAccessControl(true)
+  async updateMyProfile(
+    @User('id') id: number,
+    @Body() body: UpdateMyProfileBodyDto,
+  ): Promise<GetUserDetailResponseDto> {
+    return this.userService.updateMyProfile(id, body);
+  }
+
+  @Post('change-password')
+  @SwaggerApiDocument({
+    response: {
+      status: HttpStatus.NO_CONTENT,
+    },
+    body: { type: ChangePasswordBodyDto, required: true },
+    operation: {
+      operationId: `changePassword`,
+      summary: `Api changePassword`,
+    },
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RoleBaseAccessControl(true)
+  async changePassword(
+    @User('id') id: number,
+    @Body() body: ChangePasswordBodyDto,
+  ): Promise<void> {
+    await this.userService.changePassword(id, body);
   }
 
   @Get(':id')

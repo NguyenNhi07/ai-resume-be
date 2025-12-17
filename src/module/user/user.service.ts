@@ -17,6 +17,8 @@ import {
   GetUserListResponseDto,
   UpdateUserBodyDto,
   UpdateUserResponseDto,
+  UpdateMyProfileBodyDto,
+  ChangePasswordBodyDto,
 } from './dtos';
 import { USER_DEFAULT_SELECT_BY_ADMIN } from './user.const';
 
@@ -131,5 +133,78 @@ export class UserService {
       throw new ServerException(ERROR_RESPONSE.USER_NOT_FOUND);
     }
     return this.databaseService.user.delete({ where: { id } });
+  }
+
+  async updateMyProfile(userId: number, body: UpdateMyProfileBodyDto): Promise<GetUserDetailResponseDto> {
+    const user = await this.databaseService.user.findFirst({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new ServerException(ERROR_RESPONSE.USER_NOT_FOUND);
+    }
+
+    const data: Prisma.UserUpdateInput = {};
+    if (body.name !== undefined) {
+      data.fullName = body.name;
+    }
+    if (body.email !== undefined) {
+      data.email = body.email;
+    }
+    if (body.dateOfBirth !== undefined) {
+      data.dob = body.dateOfBirth;
+    }
+    if (body.phoneNumber !== undefined) {
+      data.phoneNumber = body.phoneNumber;
+    }
+    if (body.gender !== undefined) {
+      // cast string from FE to enum
+      data.gender = body.gender as any;
+    }
+    if (body.profession !== undefined) {
+      data.profession = body.profession;
+    }
+    if (body.imageLink !== undefined) {
+      data.imageLink = body.imageLink;
+    }
+
+    const updated = await this.databaseService.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        ...USER_DEFAULT_SELECT_BY_ADMIN,
+        temporaryPassword: true,
+      },
+    });
+
+    return {
+      ...updated,
+      isFirstTimeLogin: !updated.lastActive,
+    };
+  }
+
+  async changePassword(userId: number, body: ChangePasswordBodyDto): Promise<void> {
+    const user = await this.databaseService.user.findFirst({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new ServerException(ERROR_RESPONSE.USER_NOT_FOUND);
+    }
+
+    const isCorrectPass = await bcrypt.compare(body.oldPassword, user.password);
+    if (!isCorrectPass) {
+      throw new ServerException(ERROR_RESPONSE.OLD_PASSWORD_INCORRECT);
+    }
+
+    const { BCRYPT_SALT_ROUNDS } = ServerConfig.get();
+    const newPasswordHashed = await bcrypt.hash(body.newPassword, BCRYPT_SALT_ROUNDS);
+
+    await this.databaseService.user.update({
+      where: { id: userId },
+      data: {
+        password: newPasswordHashed,
+        temporaryPassword: null,
+        forceResetPassword: false,
+      },
+    });
   }
 }

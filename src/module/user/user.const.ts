@@ -17,6 +17,7 @@ export const USER_DEFAULT_SELECT: Prisma.UserSelect = {
   imageLink: true,
   lastActive: true,
   language: true,
+  profession: true,
 };
 
 export const USER_DEFAULT_SELECT_BY_ADMIN: Prisma.UserSelect = {

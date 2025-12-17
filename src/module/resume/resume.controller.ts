@@ -101,6 +101,25 @@ export class ResumeController {
     return this.resumeService.updateResume(id, body);
   }
 
+  @Put(':id/visibility')
+  @SwaggerApiDocument({
+    response: { type: UpdateResumeResponseDto },
+    body: {
+      type: UpdateResumeBodyDto,
+      required: true,
+    },
+    operation: {
+      operationId: `updateResumeVisibility`,
+      summary: `Api updateResumeVisibility`,
+    },
+  })
+  async updateResumeVisibility(
+    @Param('id') id: number,
+    @Body('isPublic') isPublic: boolean,
+  ): Promise<UpdateResumeResponseDto> {
+    return this.resumeService.setResumeVisibility(id, isPublic);
+  }
+
   @Delete(':id')
   @SwaggerApiDocument({
     response: { status: HttpStatus.NO_CONTENT },

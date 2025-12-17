@@ -273,4 +273,75 @@ export class UpdateUserBodyDto extends PartialType(CreateUserBodyDto) {
 
 export class UpdateUserResponseDto extends BaseUserResponseDto {}
 
+// ****************************** Custom User dto for FE profile ******************************
+
+export class UpdateMyProfileBodyDto {
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+  })
+  name: string;
+
+  @PropertyDto({
+    type: Date,
+    required: false,
+    validated: true,
+  })
+  dateOfBirth: Date;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+  })
+  phoneNumber: string;
+
+  @PropertyDto({
+    type: Gender,
+    required: false,
+    validated: true,
+    structure: 'enum',
+  })
+  gender: Gender;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+  })
+  @IsEmail()
+  email: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+  })
+  profession: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+  })
+  imageLink: string;
+}
+
+export class ChangePasswordBodyDto {
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  oldPassword: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  newPassword: string;
+}
+
 // ****************************** More User dto below ******************************

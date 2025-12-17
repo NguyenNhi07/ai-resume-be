@@ -81,6 +81,9 @@ model Resume {
   experiences  Json?
   educations   Json?
   projects     Json?
+  template     String?  @default("classic")
+  accentColor  String?  @default("#3B82F6")
+  fontFamily   String?  @default("inter")
   isPublic     Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

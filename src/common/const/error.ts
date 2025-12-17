@@ -46,6 +46,11 @@ export const ERROR_RESPONSE = {
     errorCode: 8,
     message: `Invalid credentials`,
   },
+  OLD_PASSWORD_INCORRECT: {
+    statusCode: HttpStatus.BAD_REQUEST,
+    errorCode: 801,
+    message: `Old password is incorrect`,
+  },
   INVALID_IMAGE_EXTENSION: {
     statusCode: HttpStatus.UNPROCESSABLE_ENTITY,
     errorCode: 9,
