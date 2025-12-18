@@ -6,6 +6,7 @@ import {
   OptimizeTextResponseDto,
   ScoreResumeByJDResponseDto,
   CoverLetterResponseDto,
+  GenerateInterviewQuestionsResponseDto,
 } from './dtos';
 
 @Injectable()
@@ -277,6 +278,119 @@ Now generate the cover letter and return ONLY the JSON object.`;
         language: String(parsed.language || 'auto'),
         coverLetter,
       };
+    } catch (error: any) {
+      if (error?.status === 503) {
+        throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
+      }
+      throw error;
+    }
+  }
+
+  async generateInterviewQuestions(
+    resumeText: string,
+    jdText: string,
+  ): Promise<GenerateInterviewQuestionsResponseDto> {
+    if (!this.ai) {
+      throw new Error('GEMINI_API_KEY is not configured');
+    }
+
+    const prompt = `You are a senior technical interviewer and hiring manager.
+
+Your task is to generate realistic interview questions based on:
+- The candidate's CV
+- The provided Job Description (JD)
+
+IMPORTANT – LANGUAGE RULE:
+- Detect the language of the CV.
+- If the CV is written in Vietnamese → respond in Vietnamese.
+- If the CV is written in English → respond in English.
+- If mixed → respond in the language used MOST in the CV.
+- DO NOT translate unless required by this rule.
+
+Generate interview questions that:
+- Are highly relevant to the JD
+- Are aligned with the candidate’s experience level
+- Help evaluate both technical and soft skills
+
+Return the result STRICTLY as a JSON object (NO markdown, NO extra text):
+{
+  "language": "vi | en",
+  "matchedPosition": string,
+  "questions": [
+    {
+      "type": "technical | behavioral | experience | situational | soft-skill",
+      "question": string,
+      "expectedAnswer": string
+    }
+  ]
+}
+
+Guidelines:
+- Generate 8–12 questions
+- Prioritize skills mentioned in the JD
+- Include at least:
+  - 3 technical questions
+  - 2 behavioral or soft-skill questions
+- expectedAnswer should be concise, practical, and explain what interviewers look for
+- Tone: professional, realistic, interviewer-style
+
+CV:
+"""
+${resumeText}
+"""
+
+JOB_DESCRIPTION:
+"""
+${jdText}
+"""
+
+Now analyze and output ONLY the JSON object described above.
+`;
+
+    try {
+      const result: any = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      });
+
+      const response = result?.response ?? result;
+      const rawText =
+        typeof response?.text === 'function' ? response.text() : response?.text ?? '';
+      const text = String(rawText || '').trim();
+
+      let parsed: any;
+      try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const jsonText = jsonMatch ? jsonMatch[0] : text;
+        parsed = JSON.parse(jsonText);
+      } catch (e) {
+        ServerLogger.error({
+          message: 'Failed to parse AI interviewQuestions JSON',
+          context: 'AiService.generateInterviewQuestions',
+          error: { rawText: text, parseError: (e as any)?.message },
+        });
+        parsed = {
+          language: 'vi',
+          matchedPosition: '',
+          questions: [],
+        };
+      }
+
+      const questions = Array.isArray(parsed.questions) ? parsed.questions : [];
+
+      const safe: GenerateInterviewQuestionsResponseDto = {
+        language: String(parsed.language || 'vi'),
+        matchedPosition: parsed.matchedPosition ? String(parsed.matchedPosition) : undefined,
+        questions: questions
+          .map((q: any) => ({
+            type: String(q.type || 'technical'),
+            question: String(q.question || '').trim(),
+            expectedAnswer: String(q.expectedAnswer || '').trim(),
+          }))
+          .filter((q: any) => q.question),
+      };
+
+      return safe;
     } catch (error: any) {
       if (error?.status === 503) {
         throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');

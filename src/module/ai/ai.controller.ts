@@ -10,6 +10,8 @@ import {
   ScoreResumeByJDResponseDto,
   CoverLetterBodyDto,
   CoverLetterResponseDto,
+  GenerateInterviewQuestionsBodyDto,
+  GenerateInterviewQuestionsResponseDto,
 } from './dtos';
 
 @Controller('ai')
@@ -63,6 +65,21 @@ export class AiController {
     @Body() body: CoverLetterBodyDto,
   ): Promise<CoverLetterResponseDto> {
     return this.aiService.generateCoverLetter(body.resumeText, body.jdText, body.type);
+  }
+
+  @Post('interview-questions')
+  @SwaggerApiDocument({
+    response: { type: GenerateInterviewQuestionsResponseDto },
+    body: { type: GenerateInterviewQuestionsBodyDto, required: true },
+    operation: {
+      operationId: `generateInterviewQuestions`,
+      summary: `Api generateInterviewQuestions - Generate mock interview questions from resume & JD`,
+    },
+  })
+  async generateInterviewQuestions(
+    @Body() body: GenerateInterviewQuestionsBodyDto,
+  ): Promise<GenerateInterviewQuestionsResponseDto> {
+    return this.aiService.generateInterviewQuestions(body.resumeText, body.jdText);
   }
 }
 
