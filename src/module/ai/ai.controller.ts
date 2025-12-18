@@ -14,6 +14,8 @@ import {
   GenerateInterviewQuestionsResponseDto,
   ScoreInterviewAnswersBodyDto,
   ScoreInterviewAnswersResponseDto,
+  TailorResumeByJDBodyDto,
+  TailorResumeByJDResponseDto,
 } from './dtos';
 
 @Controller('ai')
@@ -97,6 +99,21 @@ export class AiController {
     @Body() body: ScoreInterviewAnswersBodyDto,
   ): Promise<ScoreInterviewAnswersResponseDto> {
     return this.aiService.scoreInterviewAnswers(body.qaList);
+  }
+
+  @Post('tailor-resume-jd')
+  @SwaggerApiDocument({
+    response: { type: TailorResumeByJDResponseDto },
+    body: { type: TailorResumeByJDBodyDto, required: true },
+    operation: {
+      operationId: `tailorResumeByJD`,
+      summary: `Api tailorResumeByJD - Tailor resume content based on JD`,
+    },
+  })
+  async tailorResumeByJD(
+    @Body() body: TailorResumeByJDBodyDto,
+  ): Promise<TailorResumeByJDResponseDto> {
+    return this.aiService.tailorResumeByJD(body.resumeText, body.jdText);
   }
 }
 

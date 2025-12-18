@@ -291,3 +291,105 @@ export class ScoreInterviewAnswersResponseDto {
   overallFeedback: string;
 }
 
+export class TailorResumeByJDBodyDto {
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    example: 'Full CV content as plain text...',
+  })
+  resumeText: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    example: 'Job description text...',
+  })
+  jdText: string;
+}
+
+export class TailorSectionDto {
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    example: 'experience',
+  })
+  section: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    example: 'Kinh nghiệm làm việc',
+  })
+  title: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  original: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  optimized: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    structure: 'array',
+  })
+  changes: string[];
+}
+
+export class TailorResumeByJDResponseDto {
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    example: 'vi',
+  })
+  language: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+    example: 'Senior Frontend Developer',
+  })
+  matchedPosition?: string;
+
+  @PropertyDto({
+    type: Object,
+    required: true,
+    validated: true,
+  })
+  summary: {
+    original: string;
+    optimized: string;
+  };
+
+  @PropertyDto({
+    type: TailorSectionDto,
+    required: true,
+    validated: true,
+    structure: 'dtoArray',
+  })
+  sections: TailorSectionDto[];
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    structure: 'array',
+  })
+  overallSuggestions: string[];
+}
+

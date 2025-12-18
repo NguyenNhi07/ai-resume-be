@@ -9,6 +9,7 @@ import {
   GenerateInterviewQuestionsResponseDto,
   ScoreInterviewAnswersResponseDto,
   QaItemDto,
+  TailorResumeByJDResponseDto,
 } from './dtos';
 
 @Injectable()
@@ -517,6 +518,139 @@ Now analyze and output ONLY the JSON object described above.
             : [],
         })),
         overallFeedback: String(parsed.overallFeedback || ''),
+      };
+
+      return safe;
+    } catch (error: any) {
+      if (error?.status === 503) {
+        throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
+      }
+      throw error;
+    }
+  }
+
+  async tailorResumeByJD(
+    resumeText: string,
+    jdText: string,
+  ): Promise<TailorResumeByJDResponseDto> {
+    if (!this.ai) {
+      throw new Error('GEMINI_API_KEY is not configured');
+    }
+
+    const prompt = `You are a professional resume writer and technical recruiter.
+
+Your task is to revise and improve a candidate's CV so that it matches the given Job Description (JD) as closely as possible,
+while remaining truthful and consistent with the original CV.
+
+IMPORTANT – LANGUAGE RULE:
+- Detect the language of the CV.
+- If the CV is written in Vietnamese → respond in Vietnamese.
+- If the CV is written in English → respond in English.
+- If mixed → respond in the language used MOST in the CV.
+- DO NOT translate unless required by this rule.
+
+Editing rules:
+- DO NOT invent skills, experience, or companies that are not implied by the original CV
+- You MAY rephrase, reorganize, and highlight relevant content
+- Prioritize keywords and responsibilities mentioned in the JD
+- Use professional, ATS-friendly language
+- Keep the content concise and impactful
+
+Return the result STRICTLY as a JSON object (NO markdown, NO extra text):
+{
+  "language": "vi | en",
+  "matchedPosition": string,
+  "summary": {
+    "original": string,
+    "optimized": string
+  },
+  "sections": [
+    {
+      "section": "summary | experience | skills | projects | education | other",
+      "title": string,
+      "original": string,
+      "optimized": string,
+      "changes": string[]
+    }
+  ],
+  "overallSuggestions": string[]
+}
+
+Guidelines:
+- Only include sections that exist in the original CV
+- \`changes\` should briefly explain what was improved (e.g. "Added keywords from JD", "Clarified impact", "Improved action verbs")
+- Optimized content should be ready to paste into a real CV
+
+CV:
+"""
+${resumeText}
+"""
+
+JOB_DESCRIPTION:
+"""
+${jdText}
+"""
+
+Now analyze and output ONLY the JSON object described above.
+`;
+
+    try {
+      const result: any = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      });
+
+      const response = result?.response ?? result;
+      const rawText =
+        typeof response?.text === 'function' ? response.text() : response?.text ?? '';
+      const text = String(rawText || '').trim();
+
+      let parsed: any;
+      try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const jsonText = jsonMatch ? jsonMatch[0] : text;
+        parsed = JSON.parse(jsonText);
+      } catch (e) {
+        ServerLogger.error({
+          message: 'Failed to parse AI tailorResumeByJD JSON',
+          context: 'AiService.tailorResumeByJD',
+          error: { rawText: text, parseError: (e as any)?.message },
+        });
+        parsed = {
+          language: 'vi',
+          matchedPosition: '',
+          summary: {
+            original: resumeText,
+            optimized: resumeText,
+          },
+          sections: [],
+          overallSuggestions: [
+            'Không thể phân tích đầy đủ CV/JD, vui lòng thử lại sau hoặc chỉnh sửa thủ công.',
+          ],
+        };
+      }
+
+      const sections = Array.isArray(parsed.sections) ? parsed.sections : [];
+
+      const safe: TailorResumeByJDResponseDto = {
+        language: String(parsed.language || 'vi'),
+        matchedPosition: parsed.matchedPosition
+          ? String(parsed.matchedPosition)
+          : undefined,
+        summary: {
+          original: String(parsed.summary?.original || ''),
+          optimized: String(parsed.summary?.optimized || ''),
+        },
+        sections: sections.map((s: any) => ({
+          section: String(s.section || ''),
+          title: String(s.title || ''),
+          original: String(s.original || ''),
+          optimized: String(s.optimized || ''),
+          changes: Array.isArray(s.changes) ? s.changes.map(String) : [],
+        })),
+        overallSuggestions: Array.isArray(parsed.overallSuggestions)
+          ? parsed.overallSuggestions.map(String)
+          : [],
       };
 
       return safe;
