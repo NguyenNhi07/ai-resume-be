@@ -12,6 +12,8 @@ import {
   CoverLetterResponseDto,
   GenerateInterviewQuestionsBodyDto,
   GenerateInterviewQuestionsResponseDto,
+  ScoreInterviewAnswersBodyDto,
+  ScoreInterviewAnswersResponseDto,
 } from './dtos';
 
 @Controller('ai')
@@ -80,6 +82,21 @@ export class AiController {
     @Body() body: GenerateInterviewQuestionsBodyDto,
   ): Promise<GenerateInterviewQuestionsResponseDto> {
     return this.aiService.generateInterviewQuestions(body.resumeText, body.jdText);
+  }
+
+  @Post('interview-score')
+  @SwaggerApiDocument({
+    response: { type: ScoreInterviewAnswersResponseDto },
+    body: { type: ScoreInterviewAnswersBodyDto, required: true },
+    operation: {
+      operationId: `scoreInterviewAnswers`,
+      summary: `Api scoreInterviewAnswers - Score mock interview answers per question & overall`,
+    },
+  })
+  async scoreInterviewAnswers(
+    @Body() body: ScoreInterviewAnswersBodyDto,
+  ): Promise<ScoreInterviewAnswersResponseDto> {
+    return this.aiService.scoreInterviewAnswers(body.qaList);
   }
 }
 

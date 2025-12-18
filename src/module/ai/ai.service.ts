@@ -7,6 +7,8 @@ import {
   ScoreResumeByJDResponseDto,
   CoverLetterResponseDto,
   GenerateInterviewQuestionsResponseDto,
+  ScoreInterviewAnswersResponseDto,
+  QaItemDto,
 } from './dtos';
 
 @Injectable()
@@ -388,6 +390,133 @@ Now analyze and output ONLY the JSON object described above.
             expectedAnswer: String(q.expectedAnswer || '').trim(),
           }))
           .filter((q: any) => q.question),
+      };
+
+      return safe;
+    } catch (error: any) {
+      if (error?.status === 503) {
+        throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
+      }
+      throw error;
+    }
+  }
+
+  async scoreInterviewAnswers(
+    qaList: QaItemDto[],
+  ): Promise<ScoreInterviewAnswersResponseDto> {
+    if (!this.ai) {
+      throw new Error('GEMINI_API_KEY is not configured');
+    }
+
+    const qaText = qaList
+      .map(
+        (item, index) =>
+          `Q${index + 1}: ${item.question}\nA${index + 1}: ${item.answer || ''}`,
+      )
+      .join('\n\n');
+
+    const prompt = `You are a senior interviewer and career coach.
+
+Your task is to evaluate a candidate’s interview answers.
+
+IMPORTANT – LANGUAGE RULE:
+- Detect the language of the user's answers.
+- If the answers are written in Vietnamese → respond in Vietnamese.
+- If the answers are written in English → respond in English.
+- If mixed → respond in the language used MOST in the answers.
+- DO NOT translate unless required by this rule.
+
+Evaluation criteria:
+- Relevance to the question
+- Technical correctness (if applicable)
+- Clarity and structure
+- Practical examples and reasoning
+- Communication quality
+
+Return the result STRICTLY as a JSON object (NO markdown, NO extra text):
+{
+  "language": "vi | en",
+  "averageScore": number,
+  "results": [
+    {
+      "question": string,
+      "answer": string,
+      "score": number,
+      "comment": string,
+      "improvementSuggestions": string[]
+    }
+  ],
+  "overallFeedback": string
+}
+
+Scoring rules:
+- Each question is scored from 0 to 100
+- averageScore is the average of all question scores (rounded to the nearest integer)
+- Scores must reflect realistic interview standards
+
+Tone & style:
+- Professional, constructive, and supportive
+- Be honest but encouraging
+- Focus on how to improve to score higher in real interviews
+
+QUESTIONS_AND_ANSWERS:
+${qaText}
+
+Now analyze and output ONLY the JSON object described above.
+`;
+
+    try {
+      const result: any = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      });
+
+      const response = result?.response ?? result;
+      const rawText =
+        typeof response?.text === 'function' ? response.text() : response?.text ?? '';
+      const text = String(rawText || '').trim();
+
+      let parsed: any;
+      try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const jsonText = jsonMatch ? jsonMatch[0] : text;
+        parsed = JSON.parse(jsonText);
+      } catch (e) {
+        ServerLogger.error({
+          message: 'Failed to parse AI scoreInterviewAnswers JSON',
+          context: 'AiService.scoreInterviewAnswers',
+          error: { rawText: text, parseError: (e as any)?.message },
+        });
+        parsed = {
+          language: 'vi',
+          averageScore: 60,
+          results: qaList.map((item) => ({
+            question: item.question,
+            answer: item.answer,
+            score: 60,
+            comment: 'Không thể phân tích đầy đủ, vui lòng thử lại.',
+            improvementSuggestions: [],
+          })),
+          overallFeedback:
+            'Không thể phân tích đầy đủ câu trả lời, vui lòng thử lại sau hoặc cải thiện nội dung câu trả lời.',
+        };
+      }
+
+      const results = Array.isArray(parsed.results) ? parsed.results : [];
+
+      const safe: ScoreInterviewAnswersResponseDto = {
+        language: String(parsed.language || 'vi'),
+        averageScore: Number(parsed.averageScore ?? 0),
+        results: results.map((r: any) => ({
+          question: String(r.question || ''),
+          answer: String(r.answer || ''),
+          score: Number(r.score ?? 0),
+          comment: String(r.comment || ''),
+          improvementSuggestions: Array.isArray(r.improvementSuggestions)
+            ? r.improvementSuggestions.map(String)
+            : [],
+        })),
+        overallFeedback: String(parsed.overallFeedback || ''),
       };
 
       return safe;

@@ -196,3 +196,98 @@ export class GenerateInterviewQuestionsResponseDto {
   questions: InterviewQuestionDto[];
 }
 
+export class QaItemDto {
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  question: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  answer: string;
+}
+
+export class ScoreInterviewAnswersBodyDto {
+  @PropertyDto({
+    type: QaItemDto,
+    required: true,
+    validated: true,
+    structure: 'dtoArray',
+  })
+  qaList: QaItemDto[];
+}
+
+export class ScoreInterviewAnswerResultDto {
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  question: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  answer: string;
+
+  @PropertyDto({
+    type: Number,
+    required: true,
+    validated: true,
+  })
+  score: number;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  comment: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    structure: 'array',
+  })
+  improvementSuggestions: string[];
+}
+
+export class ScoreInterviewAnswersResponseDto {
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  language: string;
+
+  @PropertyDto({
+    type: Number,
+    required: true,
+    validated: true,
+  })
+  averageScore: number;
+
+  @PropertyDto({
+    type: ScoreInterviewAnswerResultDto,
+    required: true,
+    validated: true,
+    structure: 'dtoArray',
+  })
+  results: ScoreInterviewAnswerResultDto[];
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  overallFeedback: string;
+}
+
