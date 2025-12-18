@@ -5,6 +5,7 @@ import { ServerLogger } from '@server/logger';
 import {
   OptimizeTextResponseDto,
   ScoreResumeByJDResponseDto,
+  CoverLetterResponseDto,
 } from './dtos';
 
 @Injectable()
@@ -181,6 +182,101 @@ Now return ONLY the JSON object.
       };
 
       return safe;
+    } catch (error: any) {
+      if (error?.status === 503) {
+        throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
+      }
+      throw error;
+    }
+  }
+
+  async generateCoverLetter(
+    resumeText: string,
+    jdText: string,
+    type: 'normal' | 'friendly',
+  ): Promise<CoverLetterResponseDto> {
+    if (!this.ai) {
+      throw new Error('GEMINI_API_KEY is not configured');
+    }
+
+    try {
+      const prompt = `You are an expert recruiter and professional career writer.
+
+LANGUAGE RULE (VERY IMPORTANT):
+- Detect the language of the CV and Job Description.
+- The output MUST be written in the SAME language as the input.
+- Do NOT translate unless the input is translated.
+
+TASK:
+Write a professional cover letter based on the candidate's CV and the Job Description (JD).
+
+TONE TYPE:
+- "normal": formal, professional, suitable for corporate or traditional companies.
+- "friendly": warm, approachable, slightly conversational, suitable for startups or creative teams.
+
+CONTENT RULES:
+- Use ONLY information that appears in the CV.
+- Align skills and experience with the Job Description.
+- Do NOT invent achievements, companies, or years of experience.
+- Keep the letter concise (3–5 short paragraphs).
+- Avoid clichés and generic phrases.
+
+OUTPUT FORMAT (STRICT JSON ONLY):
+{
+  "type": "${type}",
+  "language": "auto",
+  "coverLetter": string
+}
+
+CV:
+"""
+${resumeText}
+"""
+
+JOB DESCRIPTION:
+"""
+${jdText}
+"""
+
+Now generate the cover letter and return ONLY the JSON object.`;
+
+      const result: any = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      });
+
+      const response = result?.response ?? result;
+      const rawText =
+        typeof response?.text === 'function'
+          ? response.text()
+          : response?.text ?? '';
+      const text = String(rawText || '').trim();
+
+      let parsed: any;
+      try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const jsonText = jsonMatch ? jsonMatch[0] : text;
+        parsed = JSON.parse(jsonText);
+      } catch (e) {
+        ServerLogger.error({
+          message: 'Failed to parse AI coverLetter JSON',
+          context: 'AiService.generateCoverLetter',
+          error: { rawText: text, parseError: (e as any)?.message },
+        });
+        parsed = {
+          type,
+          language: 'auto',
+          coverLetter:
+            'Không thể tạo thư xin việc từ AI, vui lòng thử lại hoặc soạn thủ công dựa trên CV và JD.',
+        };
+      }
+
+      const coverLetter = String(parsed.coverLetter || '').trim();
+      return {
+        type: String(parsed.type || type),
+        language: String(parsed.language || 'auto'),
+        coverLetter,
+      };
     } catch (error: any) {
       if (error?.status === 503) {
         throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
