@@ -37,6 +37,8 @@ const MAIN_CONFIG = {
   PRISMA_LOG_LEVEL: process.env.PRISMA_LOG_LEVEL?.split(','),
   // integrations
   PEOPLE_DATA_LAB_API_KEY: process.env.PEOPLE_DATA_LAB_API_KEY,
+  // AI
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
 };
 
 Object.seal(MAIN_CONFIG);

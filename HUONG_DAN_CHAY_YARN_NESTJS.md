@@ -122,3 +122,11 @@ Sau khi hoàn thành các bước trên, bạn sẽ có một module Resume hoà
 
 Chúc bạn thành công! 🚀
 
+
+
+cd nestjs-codebase
+yarn prisma migrate dev --name add_resume_title --create-only
+yarn prisma migrate deploy
+yarn prisma generate
+yarn start:dev
+
