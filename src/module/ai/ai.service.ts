@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { GoogleGenAI } from '@google/genai';
 import { ServerConfig } from '@server/config';
 import { ServerLogger } from '@server/logger';
-import { OptimizeTextResponseDto } from './dtos';
+import {
+  OptimizeTextResponseDto,
+  ScoreResumeByJDResponseDto,
+} from './dtos';
 
 @Injectable()
 export class AiService {
@@ -69,6 +72,115 @@ Return ONLY the optimized text.
       const optimizedText = String(rawText || '').trim();
 
       return { optimizedText };
+    } catch (error: any) {
+      if (error?.status === 503) {
+        throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
+      }
+      throw error;
+    }
+  }
+
+  async scoreResumeByJD(
+    resumeText: string,
+    jdText: string,
+  ): Promise<ScoreResumeByJDResponseDto> {
+    if (!this.ai) {
+      throw new Error('GEMINI_API_KEY is not configured');
+    }
+
+    try {
+      const prompt = `
+You are an expert technical recruiter and career coach.
+
+LANGUAGE RULE (VERY IMPORTANT):
+- Detect the language of the CV and Job Description.
+- The output MUST be written in the SAME language as the input.
+- Do NOT translate unless the input is translated.
+
+TASK:
+Evaluate how well the candidate's CV matches the given Job Description (JD).
+
+SCORING CRITERIA (TOTAL 100 POINTS):
+- Skills & Technologies match: 40 points
+- Relevant work experience: 35 points
+- Responsibilities & keyword alignment: 15 points
+- Education & certifications: 10 points
+
+OUTPUT FORMAT (STRICT JSON ONLY):
+{
+  "score": number,                // 0–100
+  "missingSkills": string[],      // skills or technologies missing from CV
+  "weakSections": string[],       // sections that are weak or unclear
+  "suggestions": string[],        // clear, actionable improvement suggestions
+  "matchedRole": string           // most suitable role based on JD (empty if unclear)
+}
+
+RULES:
+- Do NOT include markdown, comments, or explanations outside JSON.
+- Do NOT invent information not present in the CV.
+- Base the evaluation ONLY on the provided CV and JD.
+- Be professional, constructive, and realistic.
+
+CANDIDATE CV:
+"""
+${resumeText}
+"""
+
+JOB DESCRIPTION:
+"""
+${jdText}
+"""
+
+Now return ONLY the JSON object.
+`;
+      const result: any = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      });
+
+      const response = result?.response ?? result;
+      const rawText =
+        typeof response?.text === 'function'
+          ? response.text()
+          : response?.text ?? '';
+      const text = String(rawText || '').trim();
+
+      let parsed: any;
+      try {
+        // cố gắng cắt ra block JSON đầu tiên nếu model trả kèm text/thẻ ```
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const jsonText = jsonMatch ? jsonMatch[0] : text;
+        parsed = JSON.parse(jsonText);
+      } catch (e) {
+        ServerLogger.error({
+          message: 'Failed to parse AI scoreResumeByJD JSON',
+          context: 'AiService.scoreResumeByJD',
+          error: { rawText: text, parseError: (e as any)?.message },
+        });
+        parsed = {
+          score: 60,
+          missingSkills: [],
+          weakSections: [],
+          suggestions: ['Không thể phân tích đầy đủ JSON từ AI, vui lòng thử lại.'],
+          matchedRole: '',
+        };
+      }
+
+      const safe: ScoreResumeByJDResponseDto = {
+        score: Number(parsed.score ?? 0),
+        missingSkills: Array.isArray(parsed.missingSkills)
+          ? parsed.missingSkills.map(String)
+          : [],
+        weakSections: Array.isArray(parsed.weakSections)
+          ? parsed.weakSections.map(String)
+          : [],
+        suggestions: Array.isArray(parsed.suggestions)
+          ? parsed.suggestions.map(String)
+          : [],
+        matchedRole: parsed.matchedRole ? String(parsed.matchedRole) : undefined,
+      };
+
+      return safe;
     } catch (error: any) {
       if (error?.status === 503) {
         throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
