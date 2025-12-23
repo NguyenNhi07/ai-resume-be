@@ -81,6 +81,15 @@ Return ONLY the optimized text.
       if (error?.status === 503) {
         throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
       }
+      if (error?.status === 429) {
+        const errorMessage = error?.message || '';
+        if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
+          throw new Error(
+            'Đã vượt quá giới hạn sử dụng AI miễn phí (20 requests/ngày). Vui lòng thử lại sau 24 giờ hoặc nâng cấp gói dịch vụ.',
+          );
+        }
+        throw new Error('Quá nhiều yêu cầu, vui lòng thử lại sau vài phút.');
+      }
       throw error;
     }
   }
@@ -190,6 +199,15 @@ Now return ONLY the JSON object.
       if (error?.status === 503) {
         throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
       }
+      if (error?.status === 429) {
+        const errorMessage = error?.message || '';
+        if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
+          throw new Error(
+            'Đã vượt quá giới hạn sử dụng AI miễn phí (20 requests/ngày). Vui lòng thử lại sau 24 giờ hoặc nâng cấp gói dịch vụ.',
+          );
+        }
+        throw new Error('Quá nhiều yêu cầu, vui lòng thử lại sau vài phút.');
+      }
       throw error;
     }
   }
@@ -284,6 +302,15 @@ Now generate the cover letter and return ONLY the JSON object.`;
     } catch (error: any) {
       if (error?.status === 503) {
         throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
+      }
+      if (error?.status === 429) {
+        const errorMessage = error?.message || '';
+        if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
+          throw new Error(
+            'Đã vượt quá giới hạn sử dụng AI miễn phí (20 requests/ngày). Vui lòng thử lại sau 24 giờ hoặc nâng cấp gói dịch vụ.',
+          );
+        }
+        throw new Error('Quá nhiều yêu cầu, vui lòng thử lại sau vài phút.');
       }
       throw error;
     }
@@ -397,6 +424,15 @@ Now analyze and output ONLY the JSON object described above.
     } catch (error: any) {
       if (error?.status === 503) {
         throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
+      }
+      if (error?.status === 429) {
+        const errorMessage = error?.message || '';
+        if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
+          throw new Error(
+            'Đã vượt quá giới hạn sử dụng AI miễn phí (20 requests/ngày). Vui lòng thử lại sau 24 giờ hoặc nâng cấp gói dịch vụ.',
+          );
+        }
+        throw new Error('Quá nhiều yêu cầu, vui lòng thử lại sau vài phút.');
       }
       throw error;
     }
@@ -524,6 +560,15 @@ Now analyze and output ONLY the JSON object described above.
     } catch (error: any) {
       if (error?.status === 503) {
         throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
+      }
+      if (error?.status === 429) {
+        const errorMessage = error?.message || '';
+        if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
+          throw new Error(
+            'Đã vượt quá giới hạn sử dụng AI miễn phí (20 requests/ngày). Vui lòng thử lại sau 24 giờ hoặc nâng cấp gói dịch vụ.',
+          );
+        }
+        throw new Error('Quá nhiều yêu cầu, vui lòng thử lại sau vài phút.');
       }
       throw error;
     }
@@ -657,6 +702,15 @@ Now analyze and output ONLY the JSON object described above.
     } catch (error: any) {
       if (error?.status === 503) {
         throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
+      }
+      if (error?.status === 429) {
+        const errorMessage = error?.message || '';
+        if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
+          throw new Error(
+            'Đã vượt quá giới hạn sử dụng AI miễn phí (20 requests/ngày). Vui lòng thử lại sau 24 giờ hoặc nâng cấp gói dịch vụ.',
+          );
+        }
+        throw new Error('Quá nhiều yêu cầu, vui lòng thử lại sau vài phút.');
       }
       throw error;
     }

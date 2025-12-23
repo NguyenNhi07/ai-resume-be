@@ -37,6 +37,9 @@ model User {
   email              String       @unique
   password           String
   temporaryPassword  String?
+  resetOtpHash       String?
+  resetOtpExpiredAt  DateTime?
+  resetNewPassword   String?
   firstName          String
   lastName           String
   fullName           String

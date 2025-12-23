@@ -13,10 +13,14 @@ import {
   ForgetPasswordResponseDto,
   LoginBodyDto,
   LoginResponseDto,
+  ResetPasswordBodyDto,
+  ResetPasswordResponseDto,
   RefreshTokenResponseDto,
   SignupBodyDto,
   SignupResponseDto,
   LogoutResponseDto,
+  VerifyOtpBodyDto,
+  VerifyOtpResponseDto,
 } from './dtos';
 
 @Controller('auth')
@@ -68,6 +72,36 @@ export class AuthController {
     @Body() body: ForgetPasswordBodyDto,
   ): Promise<ForgetPasswordResponseDto> {
     return this.authService.forgetPassword(body);
+  }
+
+  @Post('reset-password')
+  @SwaggerApiDocument({
+    response: { type: ResetPasswordResponseDto },
+    body: { type: ResetPasswordBodyDto, required: true },
+    operation: {
+      operationId: `resetPassword`,
+      summary: `Api resetPassword`,
+    },
+  })
+  @RoleBaseAccessControl(AccessRole.Public)
+  async resetPassword(
+    @Body() body: ResetPasswordBodyDto,
+  ): Promise<ResetPasswordResponseDto> {
+    return this.authService.resetPassword(body);
+  }
+
+  @Post('verify-otp')
+  @SwaggerApiDocument({
+    response: { type: VerifyOtpResponseDto },
+    body: { type: VerifyOtpBodyDto, required: true },
+    operation: {
+      operationId: `verifyOtp`,
+      summary: `Api verifyOtp`,
+    },
+  })
+  @RoleBaseAccessControl(AccessRole.Public)
+  async verifyOtp(@Body() body: VerifyOtpBodyDto): Promise<VerifyOtpResponseDto> {
+    return this.authService.verifyOtp(body);
   }
 
   @Post('change-password')

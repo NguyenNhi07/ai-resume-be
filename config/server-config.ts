@@ -23,6 +23,12 @@ const MAIN_CONFIG = {
   // Google
   SMTP_GMAIL_USER: process.env.SMTP_GMAIL_USER,
   SMTP_GMAIL_PASS: process.env.SMTP_GMAIL_PASS,
+  // Generic SMTP
+  SMTP_HOST: process.env.SMTP_HOST,
+  SMTP_PORT: process.env.SMTP_PORT ? +process.env.SMTP_PORT : undefined,
+  SMTP_USER: process.env.SMTP_USER,
+  SMTP_PASS: process.env.SMTP_PASS,
+  SMTP_FROM: process.env.SMTP_FROM,
   // REDIS
   REDIS_HOST: process.env.REDIS_HOST,
   REDIS_PORT: +process.env.REDIS_PORT,

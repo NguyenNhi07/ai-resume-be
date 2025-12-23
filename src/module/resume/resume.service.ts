@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Scope } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { REQUEST } from '@nestjs/core';
+import { Request } from 'express';
 import { ERROR_RESPONSE } from 'src/common/const';
 import { parseOrderByFromQuery } from 'src/common/helpers/database';
 import { validatePaginationQueryDto } from 'src/common/helpers/request';
@@ -17,9 +19,20 @@ import {
   UpdateResumeResponseDto,
 } from './dtos';
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class ResumeService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    @Inject(REQUEST) private readonly request: Request,
+  ) {}
+
+  private getCurrentUserId(): number {
+    const userId = (this.request as any)?.user?.id;
+    if (!userId) {
+      throw new Error('User is not authenticated');
+    }
+    return Number(userId);
+  }
 
   async createResume(userId: number, body: CreateResumeBodyDto): Promise<CreateResumeResponseDto> {
     const { website, template, accentColor, fontFamily, ...rest } = body as any;
@@ -39,12 +52,17 @@ export class ResumeService {
       accentColor: (created as any).accentColor || '#3B82F6',
       fontFamily: (created as any).fontFamily || 'inter',
     } as CreateResumeResponseDto;
-  };
+  }
 
-  async getResumeList(query: GetResumeListQueryDto): Promise<PaginationResponseDto<GetResumeListResponseDto>> {
+  async getResumeList(
+    query: GetResumeListQueryDto,
+  ): Promise<PaginationResponseDto<GetResumeListResponseDto>> {
+    const userId = this.getCurrentUserId();
     const { page, pageSize, take, skip } = validatePaginationQueryDto(query);
-    
+
     const where: Prisma.ResumeWhereInput = {
+      userId,
+      isDeleted: false,
       // ...(query.id && { id: query.id }),
       // ...(query.userId && { userId: query.userId }),
       // ...(query.avatar && { avatar: query.avatar }),
@@ -84,19 +102,22 @@ export class ResumeService {
     ]);
 
     const totalPages = Math.ceil(total / pageSize);
-    return { 
+    return {
       data: data.map((item: any) => ({
         ...item,
         template: item.template || 'classic',
         accentColor: item.accentColor || '#3B82F6',
         fontFamily: item.fontFamily || 'inter',
       })),
-      pagination: { page, pageSize, total, totalPages } 
+      pagination: { page, pageSize, total, totalPages },
     };
   }
 
   async getResumeDetail(id: number): Promise<GetResumeDetailResponseDto> {
-    const resume = await this.databaseService.resume.findFirst({ where: { id } });
+    const userId = this.getCurrentUserId();
+    const resume = await this.databaseService.resume.findFirst({
+      where: { id, userId, isDeleted: false },
+    });
     if (!resume) {
       throw new ServerException(ERROR_RESPONSE.RESOURCE_NOT_FOUND);
     }
@@ -124,7 +145,10 @@ export class ResumeService {
   }
 
   async updateResume(id: number, body: UpdateResumeBodyDto): Promise<UpdateResumeResponseDto> {
-    const resume = await this.databaseService.resume.findFirst({ where: { id } });
+    const userId = this.getCurrentUserId();
+    const resume = await this.databaseService.resume.findFirst({
+      where: { id, userId, isDeleted: false },
+    });
     if (!resume) {
       throw new ServerException(ERROR_RESPONSE.RESOURCE_NOT_FOUND);
     }
@@ -150,7 +174,10 @@ export class ResumeService {
   }
 
   async setResumeVisibility(id: number, isPublic: boolean): Promise<UpdateResumeResponseDto> {
-    const resume = await this.databaseService.resume.findFirst({ where: { id } });
+    const userId = this.getCurrentUserId();
+    const resume = await this.databaseService.resume.findFirst({
+      where: { id, userId, isDeleted: false },
+    });
     if (!resume) {
       throw new ServerException(ERROR_RESPONSE.RESOURCE_NOT_FOUND);
     }
@@ -167,15 +194,24 @@ export class ResumeService {
   }
 
   async deleteResume(id: number) {
-    const resume = await this.databaseService.resume.findFirst({ where: { id } });
+    const userId = this.getCurrentUserId();
+    const resume = await this.databaseService.resume.findFirst({
+      where: { id, userId, isDeleted: false },
+    });
     if (!resume) {
       throw new ServerException(ERROR_RESPONSE.RESOURCE_NOT_FOUND);
     }
-    return this.databaseService.resume.delete({ where: { id } });
+    return this.databaseService.resume.update({
+      where: { id },
+      data: { isDeleted: true },
+    });
   }
 
   async exportResumePdf(id: number): Promise<Buffer> {
-    const resume = await this.databaseService.resume.findFirst({ where: { id } });
+    const userId = this.getCurrentUserId();
+    const resume = await this.databaseService.resume.findFirst({
+      where: { id, userId, isDeleted: false },
+    });
     if (!resume) {
       throw new ServerException(ERROR_RESPONSE.RESOURCE_NOT_FOUND);
     }

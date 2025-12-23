@@ -3,6 +3,8 @@ import { JwtService } from '@nestjs/jwt';
 import { Prisma, UserRole, UserStatus } from '@prisma/client';
 import { AsyncStorage } from '@server/async-storage';
 import { ServerConfig } from '@server/config';
+import { ServerLogger } from '@server/logger';
+import nodemailer from 'nodemailer';
 import { bcrypt } from '@server/libs/bcrypt';
 import { ERROR_RESPONSE } from 'src/common/const';
 import { ServerException } from 'src/exception';
@@ -17,10 +19,14 @@ import {
   ForgetPasswordResponseDto,
   LoginBodyDto,
   LoginResponseDto,
+  ResetPasswordBodyDto,
+  ResetPasswordResponseDto,
   RefreshTokenResponseDto,
   SignupBodyDto,
   SignupResponseDto,
   LogoutResponseDto,
+  VerifyOtpBodyDto,
+  VerifyOtpResponseDto,
 } from './dtos';
 
 @Injectable()
@@ -104,8 +110,122 @@ export class AuthService {
   }
 
   async forgetPassword(body: ForgetPasswordBodyDto): Promise<ForgetPasswordResponseDto> {
-    // todo: wait for email module
-    return undefined;
+    const { email, newPassword } = body;
+
+    const user = await this.databaseService.user.findFirst({
+      where: { email, isDeleted: false },
+    });
+
+    if (!user) {
+      throw new ServerException(ERROR_RESPONSE.USER_NOT_FOUND);
+    }
+
+    // Generate 6-digit OTP
+    const rawOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = await bcrypt.hash(
+      rawOtp,
+      ServerConfig.get().BCRYPT_SALT_ROUNDS,
+    );
+
+    // Hash new password for later apply
+    const hashedNewPassword = await bcrypt.hash(
+      newPassword,
+      ServerConfig.get().BCRYPT_SALT_ROUNDS,
+    );
+
+    const expiredAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    await this.databaseService.user.update({
+      where: { id: user.id },
+      // Cast to any to avoid type issues until Prisma generate runs
+      data: {
+        resetOtpHash: hashedOtp,
+        resetOtpExpiredAt: expiredAt,
+        resetNewPassword: hashedNewPassword,
+        forceResetPassword: true,
+      } as any,
+    });
+
+    await this.sendOtpEmail({
+      to: email,
+      otp: rawOtp,
+    });
+
+    return {};
+  }
+
+  async resetPassword(body: ResetPasswordBodyDto): Promise<ResetPasswordResponseDto> {
+    // Deprecated in new flow; keeping for backward compatibility
+    // Expect token + newPassword; verify against resetOtpHash
+    const { email, token, newPassword } = body;
+
+    const user = await this.databaseService.user.findFirst({
+      where: { email, isDeleted: false },
+    });
+    const userWithReset = user as any;
+    if (!userWithReset || !userWithReset.resetOtpHash) {
+      throw new ServerException(ERROR_RESPONSE.INVALID_CREDENTIALS);
+    }
+    if (userWithReset.resetOtpExpiredAt && userWithReset.resetOtpExpiredAt < new Date()) {
+      throw new ServerException(ERROR_RESPONSE.REQUEST_TIMEOUT);
+    }
+
+    const isValidToken = await bcrypt.compare(token, userWithReset.resetOtpHash);
+    if (!isValidToken) {
+      throw new ServerException(ERROR_RESPONSE.INVALID_CREDENTIALS);
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      newPassword,
+      ServerConfig.get().BCRYPT_SALT_ROUNDS,
+    );
+
+    await this.databaseService.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetOtpHash: null,
+        resetOtpExpiredAt: null,
+        resetNewPassword: null,
+        forceResetPassword: false,
+      } as any,
+    });
+
+    return {};
+  }
+
+  async verifyOtp(body: VerifyOtpBodyDto): Promise<VerifyOtpResponseDto> {
+    const { email, otp } = body;
+
+    const user = await this.databaseService.user.findFirst({
+      where: { email, isDeleted: false },
+    });
+    const userWithReset = user as any;
+    if (!userWithReset || !userWithReset.resetOtpHash || !userWithReset.resetNewPassword) {
+      throw new ServerException(ERROR_RESPONSE.INVALID_CREDENTIALS);
+    }
+    if (userWithReset.resetOtpExpiredAt && userWithReset.resetOtpExpiredAt < new Date()) {
+      throw new ServerException(ERROR_RESPONSE.REQUEST_TIMEOUT);
+    }
+
+    const isValid = await bcrypt.compare(otp, userWithReset.resetOtpHash);
+    if (!isValid) {
+      throw new ServerException(ERROR_RESPONSE.INVALID_CREDENTIALS);
+    }
+
+    // Apply new password that user submitted in forgetPassword
+    await this.databaseService.user.update({
+      where: { id: user.id },
+      data: {
+        password: userWithReset.resetNewPassword,
+        resetOtpHash: null,
+        resetOtpExpiredAt: null,
+        resetNewPassword: null,
+        forceResetPassword: false,
+      } as any,
+    });
+
+    return {};
   }
 
   async changePassword(body: ChangePasswordBodyDto): Promise<ChangePasswordResponseDto> {
@@ -151,5 +271,46 @@ export class AuthService {
 
   private async validateUser(payload: JwtPayload) {
     return this.databaseService.user.findFirst({ where: { id: payload.userId } });
+  }
+
+  // --------- private helpers ---------
+  private async sendOtpEmail(params: { to: string; otp: string }) {
+    const config = ServerConfig.get();
+    const host = config.SMTP_HOST || config.SMTP_GMAIL_USER ? 'smtp.gmail.com' : undefined;
+    const user = config.SMTP_USER || config.SMTP_GMAIL_USER;
+    const pass = config.SMTP_PASS || config.SMTP_GMAIL_PASS;
+    const from = config.SMTP_FROM || user;
+
+    if (!host || !user || !pass || !from) {
+      ServerLogger.warn({
+        message: 'SMTP config missing, skip sending email',
+        context: 'AuthService.sendOtpEmail',
+        meta: { to: params.to },
+      });
+      // In dev, we log OTP to help testing
+      ServerLogger.info({
+        message: 'Password reset OTP (dev mode, email not sent)',
+        context: 'AuthService.sendOtpEmail',
+        meta: { to: params.to, otp: params.otp },
+      });
+      return;
+    }
+
+    const transporter = nodemailer.createTransport({
+      host,
+      port: config.SMTP_PORT || 587,
+      secure: (config.SMTP_PORT || 587) === 465,
+      auth: { user, pass },
+    });
+
+    const mailOptions = {
+      from,
+      to: params.to,
+      subject: 'Your password reset code',
+      text: `Your OTP code is: ${params.otp}. It will expire in 15 minutes.`,
+      html: `<p>Your OTP code is: <b>${params.otp}</b></p><p>This code expires in 15 minutes.</p>`,
+    };
+
+    await transporter.sendMail(mailOptions);
   }
 }

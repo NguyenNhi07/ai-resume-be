@@ -72,7 +72,71 @@ export class SignupBodyDto {
 // ****************************** ForgetPassword ******************************
 export class ForgetPasswordResponseDto {}
 
-export class ForgetPasswordBodyDto {}
+export class ForgetPasswordBodyDto {
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    example: 'example@email.com',
+  })
+  email: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    example: 'NewSecurePassword@123',
+  })
+  newPassword: string;
+}
+
+// ****************************** ResetPassword ******************************
+export class ResetPasswordResponseDto {}
+
+export class ResetPasswordBodyDto {
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  email: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    example: '6-digit or random token sent via email',
+  })
+  token: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    example: 'NewSecurePassword@123',
+  })
+  newPassword: string;
+}
+
+// ****************************** VerifyOtp ******************************
+export class VerifyOtpResponseDto {}
+
+export class VerifyOtpBodyDto {
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  email: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    example: '6-digit or random token sent via email',
+  })
+  otp: string;
+}
 
 // ****************************** ChangePassword ******************************
 export class ChangePasswordResponseDto {}
