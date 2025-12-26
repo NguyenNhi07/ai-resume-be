@@ -94,6 +94,7 @@ model Resume {
 
   // Relationships
   user User? @relation(fields: [userId], references: [id])
+  resumeScores ResumeScore[]
 }
 
 // model Experience {
@@ -183,6 +184,24 @@ model History {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   isDeleted Boolean     @default(false)
+}
+
+model ResumeScore {
+  id            Int      @id @default(autoincrement())
+  resumeId      Int
+  userId        Int?
+  score         Int
+  jdText        String
+  matchedRole   String?
+  missingSkills Json     // Array of strings
+  weakSections  Json     // Array of strings
+  suggestions   Json     // Array of strings
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  isDeleted     Boolean  @default(false)
+
+  // Relationships
+  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 }
 
 // -------------------------------- Enums -------------------------------

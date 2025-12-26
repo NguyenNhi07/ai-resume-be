@@ -28,6 +28,9 @@ import {
   GetResumeListResponseDto,
   UpdateResumeBodyDto,
   UpdateResumeResponseDto,
+  CreateResumeScoreBodyDto,
+  ResumeScoreResponseDto,
+  GetResumeScoreListQueryDto,
 } from './dtos';
 
 @Controller('resume')
@@ -69,6 +72,28 @@ export class ResumeController {
     @Query() query: GetResumeListQueryDto,
   ): Promise<PaginationResponseDto<GetResumeListResponseDto>> {
     return this.resumeService.getResumeList(query);
+  }
+
+  @Get('score')
+  @SwaggerApiDocument({
+    response: {
+      type: ResumeScoreResponseDto,
+      isPagination: true,
+    },
+    query: { type: GetResumeScoreListQueryDto, required: true },
+    operation: {
+      operationId: `getResumeScoreList`,
+      summary: `Api getResumeScoreList - Get resume score history`,
+    },
+  })
+  async getResumeScoreList(
+    @User('id') userId: number,
+    @Query() query: GetResumeScoreListQueryDto,
+  ): Promise<PaginationResponseDto<ResumeScoreResponseDto>> {
+    return this.resumeService.getResumeScoreList(userId, query.resumeId, {
+      page: query.page,
+      pageSize: query.pageSize,
+    });
   }
 
   @Get(':id')
@@ -154,5 +179,21 @@ export class ResumeController {
       'Content-Disposition': `attachment; filename="resume-${id}.pdf"`,
     });
     return new StreamableFile(buffer);
+  }
+
+  @Post('score')
+  @SwaggerApiDocument({
+    response: { type: ResumeScoreResponseDto },
+    body: { type: CreateResumeScoreBodyDto, required: true },
+    operation: {
+      operationId: `createResumeScore`,
+      summary: `Api createResumeScore - Save resume score history`,
+    },
+  })
+  async createResumeScore(
+    @User('id') userId: number,
+    @Body() body: CreateResumeScoreBodyDto,
+  ): Promise<ResumeScoreResponseDto> {
+    return this.resumeService.createResumeScore(userId, body);
   }
 }

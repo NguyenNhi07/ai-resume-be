@@ -522,4 +522,151 @@ export class UpdateResumeBodyDto extends PartialType(CreateResumeBodyDto) {
 
 export class UpdateResumeResponseDto extends BaseResumeResponseDto { }
 
+// ****************************** Resume Score DTOs ******************************
+
+export class CreateResumeScoreBodyDto {
+  @PropertyDto({
+    type: Number,
+    required: true,
+    validated: true,
+  })
+  resumeId: number;
+
+  @PropertyDto({
+    type: Number,
+    required: true,
+    validated: true,
+  })
+  score: number;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  jdText: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+  })
+  matchedRole?: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    structure: 'array',
+  })
+  missingSkills: string[];
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    structure: 'array',
+  })
+  weakSections: string[];
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    structure: 'array',
+  })
+  suggestions: string[];
+}
+
+export class ResumeScoreResponseDto {
+  @PropertyDto({
+    type: Number,
+    required: true,
+    validated: true,
+  })
+  id: number;
+
+  @PropertyDto({
+    type: Number,
+    required: true,
+    validated: true,
+  })
+  resumeId: number;
+
+  @PropertyDto({
+    type: Number,
+    required: false,
+    validated: true,
+  })
+  userId?: number;
+
+  @PropertyDto({
+    type: Number,
+    required: true,
+    validated: true,
+  })
+  score: number;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  jdText: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+  })
+  matchedRole?: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    structure: 'array',
+  })
+  missingSkills: string[];
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    structure: 'array',
+  })
+  weakSections: string[];
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    structure: 'array',
+  })
+  suggestions: string[];
+
+  @PropertyDto({
+    type: Date,
+    required: true,
+    validated: true,
+  })
+  createdAt: Date;
+
+  @PropertyDto({
+    type: Date,
+    required: true,
+    validated: true,
+  })
+  updatedAt: Date;
+}
+
+export class GetResumeScoreListQueryDto extends PaginationQueryDto {
+  @PropertyDto({
+    type: Number,
+    required: true,
+    validated: true,
+  })
+  resumeId: number;
+}
+
 // ****************************** More Resume dto below ******************************

@@ -17,6 +17,9 @@ import {
   GetResumeListResponseDto,
   UpdateResumeBodyDto,
   UpdateResumeResponseDto,
+  CreateResumeScoreBodyDto,
+  ResumeScoreResponseDto,
+  GetResumeScoreListQueryDto,
 } from './dtos';
 
 @Injectable({ scope: Scope.REQUEST })
@@ -1609,5 +1612,92 @@ export class ResumeService {
         }
       });
     }
+  }
+
+  // Resume Score History Methods
+  async createResumeScore(
+    userId: number,
+    body: {
+      resumeId: number;
+      score: number;
+      jdText: string;
+      matchedRole?: string;
+      missingSkills: string[];
+      weakSections: string[];
+      suggestions: string[];
+    },
+  ) {
+    const created = await this.databaseService.resumeScore.create({
+      data: {
+        resumeId: body.resumeId,
+        userId,
+        score: body.score,
+        jdText: body.jdText,
+        matchedRole: body.matchedRole,
+        missingSkills: body.missingSkills as any,
+        weakSections: body.weakSections as any,
+        suggestions: body.suggestions as any,
+      },
+    });
+    return {
+      id: created.id,
+      resumeId: created.resumeId,
+      userId: created.userId,
+      score: created.score,
+      jdText: created.jdText,
+      matchedRole: created.matchedRole,
+      missingSkills: created.missingSkills as string[],
+      weakSections: created.weakSections as string[],
+      suggestions: created.suggestions as string[],
+      createdAt: created.createdAt,
+      updatedAt: created.updatedAt,
+    };
+  }
+
+  async getResumeScoreList(
+    userId: number,
+    resumeId: number,
+    query: { page?: number; pageSize?: number },
+  ) {
+    const page = query.page || 1;
+    const pageSize = Math.min(query.pageSize || 10, 100);
+
+    const where = {
+      resumeId,
+      userId,
+      isDeleted: false,
+    };
+
+    const [items, total] = await Promise.all([
+      this.databaseService.resumeScore.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.databaseService.resumeScore.count({ where }),
+    ]);
+
+    return {
+      data: items.map((item) => ({
+        id: item.id,
+        resumeId: item.resumeId,
+        userId: item.userId,
+        score: item.score,
+        jdText: item.jdText,
+        matchedRole: item.matchedRole,
+        missingSkills: item.missingSkills as string[],
+        weakSections: item.weakSections as string[],
+        suggestions: item.suggestions as string[],
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      })),
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    };
   }
 }
