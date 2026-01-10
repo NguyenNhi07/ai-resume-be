@@ -1,14 +1,14 @@
-import { Injectable } from '@nestjs/common';
 import { GoogleGenAI } from '@google/genai';
+import { Injectable } from '@nestjs/common';
 import { ServerConfig } from '@server/config';
 import { ServerLogger } from '@server/logger';
 import {
-  OptimizeTextResponseDto,
-  ScoreResumeByJDResponseDto,
   CoverLetterResponseDto,
   GenerateInterviewQuestionsResponseDto,
-  ScoreInterviewAnswersResponseDto,
+  OptimizeTextResponseDto,
   QaItemDto,
+  ScoreInterviewAnswersResponseDto,
+  ScoreResumeByJDResponseDto,
   TailorResumeByJDResponseDto,
 } from './dtos';
 
@@ -45,15 +45,18 @@ Improve and optimize the following text to make it more professional, concise, a
 IMPORTANT:
 - The output MUST be in the SAME LANGUAGE as the input text
 - Do NOT translate unless the input itself is translated
-- Do NOT add new information
+- You CAN add relevant information, achievements, skills, or details that would make the text more impressive and professional
+- Be creative and enhance the content to make it stand out
 
 Guidelines:
 - Use professional and formal language
 - Be concise and clear
-- Highlight achievements and skills
+- Highlight achievements and skills (you can add realistic achievements if they fit the context)
 - Use strong action verbs
-- Keep original meaning and key details
+- Enhance the content with relevant details that would strengthen the profile
+- Add specific metrics, numbers, or accomplishments when appropriate
 - Ensure correct grammar and structure
+- Make the text more compelling and competitive
 
 Original text:
 """
@@ -71,9 +74,7 @@ Return ONLY the optimized text.
       // tuỳ SDK, response có thể nằm trực tiếp trên result hoặc trong result.response
       const response = result?.response ?? result;
       const rawText =
-        typeof response?.text === 'function'
-          ? response.text()
-          : response?.text ?? '';
+        typeof response?.text === 'function' ? response.text() : (response?.text ?? '');
       const optimizedText = String(rawText || '').trim();
 
       return { optimizedText };
@@ -154,9 +155,7 @@ Now return ONLY the JSON object.
 
       const response = result?.response ?? result;
       const rawText =
-        typeof response?.text === 'function'
-          ? response.text()
-          : response?.text ?? '';
+        typeof response?.text === 'function' ? response.text() : (response?.text ?? '');
       const text = String(rawText || '').trim();
 
       let parsed: any;
@@ -269,9 +268,7 @@ Now generate the cover letter and return ONLY the JSON object.`;
 
       const response = result?.response ?? result;
       const rawText =
-        typeof response?.text === 'function'
-          ? response.text()
-          : response?.text ?? '';
+        typeof response?.text === 'function' ? response.text() : (response?.text ?? '');
       const text = String(rawText || '').trim();
 
       let parsed: any;
@@ -385,7 +382,7 @@ Now analyze and output ONLY the JSON object described above.
 
       const response = result?.response ?? result;
       const rawText =
-        typeof response?.text === 'function' ? response.text() : response?.text ?? '';
+        typeof response?.text === 'function' ? response.text() : (response?.text ?? '');
       const text = String(rawText || '').trim();
 
       let parsed: any;
@@ -410,7 +407,9 @@ Now analyze and output ONLY the JSON object described above.
 
       const safe: GenerateInterviewQuestionsResponseDto = {
         language: String(parsed.language || 'vi'),
-        matchedPosition: parsed.matchedPosition ? String(parsed.matchedPosition) : undefined,
+        matchedPosition: parsed.matchedPosition
+          ? String(parsed.matchedPosition)
+          : undefined,
         questions: questions
           .map((q: any) => ({
             type: String(q.type || 'technical'),
@@ -510,7 +509,7 @@ Now analyze and output ONLY the JSON object described above.
 
       const response = result?.response ?? result;
       const rawText =
-        typeof response?.text === 'function' ? response.text() : response?.text ?? '';
+        typeof response?.text === 'function' ? response.text() : (response?.text ?? '');
       const text = String(rawText || '').trim();
 
       let parsed: any;
@@ -584,8 +583,8 @@ Now analyze and output ONLY the JSON object described above.
 
     const prompt = `You are a professional resume writer and technical recruiter.
 
-Your task is to revise and improve a candidate's CV so that it matches the given Job Description (JD) as closely as possible,
-while remaining truthful and consistent with the original CV.
+Your task is to create a COMPLETE and COMPETITIVE CV that perfectly matches the given Job Description (JD).
+You must build a full CV with ALL essential sections, even if they are missing from the original CV.
 
 IMPORTANT – LANGUAGE RULE:
 - Detect the language of the CV.
@@ -594,37 +593,49 @@ IMPORTANT – LANGUAGE RULE:
 - If mixed → respond in the language used MOST in the CV.
 - DO NOT translate unless required by this rule.
 
+CRITICAL REQUIREMENTS:
+- You MUST create a COMPLETE CV with all standard sections: summary, experience, skills, projects, education
+- If a section is MISSING from the original CV, you MUST CREATE it from scratch based on the JD requirements
+- If a section exists but is incomplete, you MUST FILL IN the missing parts
+- You MUST add all skills, technologies, and experiences that are relevant to the JD
+- Create realistic, believable, and professional content that makes the candidate an ideal fit
+
 Editing rules:
-- DO NOT invent skills, experience, or companies that are not implied by the original CV
-- You MAY rephrase, reorganize, and highlight relevant content
-- Prioritize keywords and responsibilities mentioned in the JD
+- For EXISTING sections: Improve, enhance, and optimize the content
+- For MISSING sections: Create complete new sections with relevant content based on JD
+- Add specific metrics, numbers, and quantifiable achievements
+- Include all keywords and responsibilities mentioned in the JD
 - Use professional, ATS-friendly language
-- Keep the content concise and impactful
+- Make the CV competitive and attractive to recruiters
+- Ensure the CV is complete and ready to use
 
 Return the result STRICTLY as a JSON object (NO markdown, NO extra text):
 {
   "language": "vi | en",
   "matchedPosition": string,
   "summary": {
-    "original": string,
-    "optimized": string
+    "original": string,  // empty string "" if section was missing
+    "optimized": string   // complete summary, created if missing
   },
   "sections": [
     {
-      "section": "summary | experience | skills | projects | education | other",
-      "title": string,
-      "original": string,
-      "optimized": string,
-      "changes": string[]
+      "section": "summary | experience | skills | projects | education | certifications | achievements | other",
+      "title": string,     // e.g. "Professional Summary", "Work Experience", "Technical Skills"
+      "original": string,  // original content or "" if section was missing
+      "optimized": string, // complete optimized content, created if missing
+      "changes": string[], // e.g. ["Created new section", "Added 5 relevant skills", "Enhanced with metrics"]
+      "isNew": boolean     // true if this section was created (didn't exist in original)
     }
   ],
   "overallSuggestions": string[]
 }
 
 Guidelines:
-- Only include sections that exist in the original CV
-- \`changes\` should briefly explain what was improved (e.g. "Added keywords from JD", "Clarified impact", "Improved action verbs")
-- Optimized content should be ready to paste into a real CV
+- Include ALL standard CV sections (summary, experience, skills, projects, education)
+- If original section is empty or missing, set "original" to "" and "isNew" to true
+- \`changes\` should explain what was done (e.g. "Created new skills section with 10 relevant technologies", "Added 3 new projects matching JD requirements")
+- Optimized content should be complete and ready to paste into a real CV
+- Ensure every section is fully filled with professional content
 
 CV:
 """
@@ -647,7 +658,7 @@ Now analyze and output ONLY the JSON object described above.
 
       const response = result?.response ?? result;
       const rawText =
-        typeof response?.text === 'function' ? response.text() : response?.text ?? '';
+        typeof response?.text === 'function' ? response.text() : (response?.text ?? '');
       const text = String(rawText || '').trim();
 
       let parsed: any;
@@ -692,6 +703,7 @@ Now analyze and output ONLY the JSON object described above.
           original: String(s.original || ''),
           optimized: String(s.optimized || ''),
           changes: Array.isArray(s.changes) ? s.changes.map(String) : [],
+          isNew: Boolean(s.isNew ?? false),
         })),
         overallSuggestions: Array.isArray(parsed.overallSuggestions)
           ? parsed.overallSuggestions.map(String)

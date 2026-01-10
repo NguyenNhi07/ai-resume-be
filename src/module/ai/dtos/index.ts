@@ -347,6 +347,14 @@ export class TailorSectionDto {
     structure: 'array',
   })
   changes: string[];
+
+  @PropertyDto({
+    type: Boolean,
+    required: false,
+    validated: true,
+    example: false,
+  })
+  isNew?: boolean;
 }
 
 export class TailorResumeByJDResponseDto {
