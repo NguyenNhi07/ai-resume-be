@@ -84,6 +84,7 @@ model Resume {
   experiences  Json?
   educations   Json?
   projects     Json?
+  certifications Json?
   template     String?  @default("classic")
   accentColor  String?  @default("#3B82F6")
   fontFamily   String?  @default("inter")

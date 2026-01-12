@@ -116,10 +116,12 @@ TASK:
 Evaluate how well the candidate's CV matches the given Job Description (JD).
 
 SCORING CRITERIA (TOTAL 100 POINTS):
-- Skills & Technologies match: 40 points
-- Relevant work experience: 35 points
+- Skills & Technologies match: 35 points
+- Relevant work experience: 30 points
 - Responsibilities & keyword alignment: 15 points
-- Education & certifications: 10 points
+- Education & certifications: 20 points
+  * Education background: 10 points
+  * Professional certifications (industry credentials, technical certifications, licenses): 10 points
 
 OUTPUT FORMAT (STRICT JSON ONLY):
 {
@@ -237,10 +239,12 @@ TONE TYPE:
 
 CONTENT RULES:
 - Use ONLY information that appears in the CV.
-- Align skills and experience with the Job Description.
-- Do NOT invent achievements, companies, or years of experience.
+- Align skills, experience, and certifications with the Job Description.
+- Highlight relevant certifications and credentials that match the JD requirements.
+- Do NOT invent achievements, companies, certifications, or years of experience.
 - Keep the letter concise (3–5 short paragraphs).
 - Avoid clichés and generic phrases.
+- If the CV includes certifications relevant to the role, mention them to strengthen the candidate's profile.
 
 OUTPUT FORMAT (STRICT JSON ONLY):
 {
@@ -336,8 +340,10 @@ IMPORTANT – LANGUAGE RULE:
 
 Generate interview questions that:
 - Are highly relevant to the JD
-- Are aligned with the candidate’s experience level
+- Are aligned with the candidate's experience level
 - Help evaluate both technical and soft skills
+- Consider the candidate's certifications and credentials (if mentioned in CV)
+- Include questions about certifications when they are relevant to the role
 
 Return the result STRICTLY as a JSON object (NO markdown, NO extra text):
 {
@@ -358,8 +364,10 @@ Guidelines:
 - Include at least:
   - 3 technical questions
   - 2 behavioral or soft-skill questions
+  - 1 question about certifications/credentials (if the candidate has relevant certifications)
 - expectedAnswer should be concise, practical, and explain what interviewers look for
 - Tone: professional, realistic, interviewer-style
+- If the CV mentions certifications relevant to the JD, include questions about how those certifications were obtained and how they apply to the role
 
 CV:
 """
@@ -594,20 +602,23 @@ IMPORTANT – LANGUAGE RULE:
 - DO NOT translate unless required by this rule.
 
 CRITICAL REQUIREMENTS:
-- You MUST create a COMPLETE CV with all standard sections: summary, experience, skills, projects, education
+- You MUST create a COMPLETE CV with all standard sections: summary, experience, skills, projects, education, certifications
 - If a section is MISSING from the original CV, you MUST CREATE it from scratch based on the JD requirements
 - If a section exists but is incomplete, you MUST FILL IN the missing parts
-- You MUST add all skills, technologies, and experiences that are relevant to the JD
+- You MUST add all skills, technologies, experiences, and certifications that are relevant to the JD
+- If the JD mentions required certifications or credentials, you MUST include a certifications section with relevant certifications
 - Create realistic, believable, and professional content that makes the candidate an ideal fit
 
 Editing rules:
 - For EXISTING sections: Improve, enhance, and optimize the content
 - For MISSING sections: Create complete new sections with relevant content based on JD
+- For certifications section: Include industry-standard certifications, technical credentials, and professional licenses that match the JD requirements
 - Add specific metrics, numbers, and quantifiable achievements
-- Include all keywords and responsibilities mentioned in the JD
+- Include all keywords, responsibilities, and certifications mentioned in the JD
 - Use professional, ATS-friendly language
 - Make the CV competitive and attractive to recruiters
 - Ensure the CV is complete and ready to use
+- If the original CV has certifications, enhance and optimize them; if missing but JD requires them, create relevant certifications section
 
 Return the result STRICTLY as a JSON object (NO markdown, NO extra text):
 {
@@ -631,11 +642,13 @@ Return the result STRICTLY as a JSON object (NO markdown, NO extra text):
 }
 
 Guidelines:
-- Include ALL standard CV sections (summary, experience, skills, projects, education)
+- Include ALL standard CV sections (summary, experience, skills, projects, education, certifications)
 - If original section is empty or missing, set "original" to "" and "isNew" to true
-- \`changes\` should explain what was done (e.g. "Created new skills section with 10 relevant technologies", "Added 3 new projects matching JD requirements")
+- \`changes\` should explain what was done (e.g. "Created new skills section with 10 relevant technologies", "Added 3 new projects matching JD requirements", "Created certifications section with 5 industry-relevant credentials")
+- For certifications section: Format should include certification name, issuing organization, issue date, expiry date (if applicable), and credential ID/URL if available
 - Optimized content should be complete and ready to paste into a real CV
 - Ensure every section is fully filled with professional content
+- Certifications section should list certifications in a clear, professional format matching industry standards
 
 CV:
 """

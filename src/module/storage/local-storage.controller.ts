@@ -9,6 +9,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -55,6 +56,9 @@ export class LocalStorageController {
     @UploadedFile() file: MulterFile,
     @Body() body: UploadFileBodyDto,
   ): Promise<LocalStorageResponseDto> {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
     return this.localStorageService.uploadLocalFile({ ...body, file });
   }
 

@@ -8,7 +8,10 @@ import { validatePaginationQueryDto } from 'src/common/helpers/request';
 import { PaginationResponseDto } from '@server/platform/dtos';
 import { ServerException } from 'src/exception';
 import { DatabaseService } from 'src/module/base/database';
+import { ServerLogger } from '@server/logger';
 import PDFDocument from 'pdfkit';
+import puppeteer from 'puppeteer';
+import { renderResumeToHtml } from './resume-html-renderer';
 import {
   CreateResumeBodyDto,
   CreateResumeResponseDto,
@@ -219,6 +222,58 @@ export class ResumeService {
       throw new ServerException(ERROR_RESPONSE.RESOURCE_NOT_FOUND);
     }
 
+    try {
+      // Render resume to HTML
+      const html = renderResumeToHtml(resume as any);
+
+      // Launch Puppeteer browser
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      });
+
+      try {
+        const page = await browser.newPage();
+        
+        // Set content with HTML and wait for resources to load
+        await page.setContent(html, {
+          waitUntil: 'networkidle0',
+        });
+        
+        // Wait a bit more for any external images to fully load
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        // Generate PDF
+        const pdfBuffer = await page.pdf({
+          format: 'A4',
+          margin: {
+            top: '0.5in',
+            right: '0.5in',
+            bottom: '0.5in',
+            left: '0.5in',
+          },
+          printBackground: true,
+          preferCSSPageSize: true,
+        });
+
+        return Buffer.from(pdfBuffer);
+      } finally {
+        await browser.close();
+      }
+    } catch (error) {
+      ServerLogger.error({
+        message: 'Failed to export resume PDF with Puppeteer',
+        context: 'ResumeService.exportResumePdf',
+        error,
+      });
+      
+      // Fallback to PDFKit if Puppeteer fails
+      return this.exportResumePdfWithPdfKit(resume);
+    }
+  }
+
+  // Fallback method using PDFKit (original implementation)
+  private async exportResumePdfWithPdfKit(resume: any): Promise<Buffer> {
     return new Promise<Buffer>((resolve, reject) => {
       const doc = new PDFDocument({ size: 'A4', margin: 50 });
       const chunks: Buffer[] = [];

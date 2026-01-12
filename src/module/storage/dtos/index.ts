@@ -32,31 +32,28 @@ export class LocalStorageResponseDto {
 }
 
 export class UploadFileBodyDto {
-  @PropertyDto({
-    type: 'file',
-    required: true,
-    validated: true,
-  })
-  file: MulterFile;
+  // Note: file is handled by @UploadedFile() decorator, not in body
+  // So we don't validate it here to avoid validation errors
+  file?: MulterFile;
 
   @PropertyDto({
     type: Number,
     required: false,
     validated: true,
   })
-  userId: number;
+  userId?: number;
 
   @PropertyDto({
     type: Number,
     required: false,
     validated: true,
   })
-  imageWidth: number;
+  imageWidth?: number;
 
   @PropertyDto({
     type: Number,
     required: false,
     validated: true,
   })
-  imageHeight: number;
+  imageHeight?: number;
 }
