@@ -31,6 +31,10 @@ import {
   CreateResumeScoreBodyDto,
   ResumeScoreResponseDto,
   GetResumeScoreListQueryDto,
+  CreateJobApplicationBodyDto,
+  UpdateJobApplicationBodyDto,
+  JobApplicationResponseDto,
+  GetJobApplicationListQueryDto,
 } from './dtos';
 
 @Controller('resume')
@@ -94,6 +98,71 @@ export class ResumeController {
       page: query.page,
       pageSize: query.pageSize,
     });
+  }
+
+  @Post('job-application')
+  @SwaggerApiDocument({
+    response: { type: JobApplicationResponseDto },
+    body: { type: CreateJobApplicationBodyDto, required: true },
+    operation: {
+      operationId: `createJobApplication`,
+      summary: `Api createJobApplication - Create a new job application record`,
+    },
+  })
+  async createJobApplication(
+    @User('id') userId: number,
+    @Body() body: CreateJobApplicationBodyDto,
+  ): Promise<JobApplicationResponseDto> {
+    return this.resumeService.createJobApplication(userId, body);
+  }
+
+  @Get('job-application')
+  @SwaggerApiDocument({
+    response: { type: JobApplicationResponseDto, isPagination: true },
+    query: { type: GetJobApplicationListQueryDto },
+    operation: {
+      operationId: `getJobApplicationList`,
+      summary: `Api getJobApplicationList - Get list of job applications for a resume`,
+    },
+  })
+  async getJobApplicationList(
+    @User('id') userId: number,
+    @Query() query: GetJobApplicationListQueryDto,
+  ) {
+    return this.resumeService.getJobApplicationList(query);
+  }
+
+  @Put('job-application/:id')
+  @SwaggerApiDocument({
+    response: { type: JobApplicationResponseDto },
+    body: { type: UpdateJobApplicationBodyDto, required: true },
+    operation: {
+      operationId: `updateJobApplication`,
+      summary: `Api updateJobApplication - Update a job application`,
+    },
+  })
+  async updateJobApplication(
+    @User('id') userId: number,
+    @Param('id') id: string,
+    @Body() body: UpdateJobApplicationBodyDto,
+  ): Promise<JobApplicationResponseDto> {
+    return this.resumeService.updateJobApplication(userId, Number(id), body);
+  }
+
+  @Delete('job-application/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @SwaggerApiDocument({
+    response: { status: HttpStatus.NO_CONTENT },
+    operation: {
+      operationId: `deleteJobApplication`,
+      summary: `Api deleteJobApplication - Delete a job application`,
+    },
+  })
+  async deleteJobApplication(
+    @User('id') userId: number,
+    @Param('id') id: string,
+  ): Promise<void> {
+    return this.resumeService.deleteJobApplication(userId, Number(id));
   }
 
   @Get(':id')

@@ -14,6 +14,8 @@ import {
   GenerateInterviewQuestionsResponseDto,
   ScoreInterviewAnswersBodyDto,
   ScoreInterviewAnswersResponseDto,
+  SuggestJobsBodyDto,
+  SuggestJobsResponseDto,
   TailorResumeByJDBodyDto,
   TailorResumeByJDResponseDto,
 } from './dtos';
@@ -114,6 +116,21 @@ export class AiController {
     @Body() body: TailorResumeByJDBodyDto,
   ): Promise<TailorResumeByJDResponseDto> {
     return this.aiService.tailorResumeByJD(body.resumeText, body.jdText);
+  }
+
+  @Post('suggest-jobs')
+  @SwaggerApiDocument({
+    response: { type: SuggestJobsResponseDto },
+    body: { type: SuggestJobsBodyDto, required: true },
+    operation: {
+      operationId: `suggestJobs`,
+      summary: `Api suggestJobs - Suggest job openings based on resume`,
+    },
+  })
+  async suggestJobs(
+    @Body() body: SuggestJobsBodyDto,
+  ): Promise<SuggestJobsResponseDto> {
+    return this.aiService.suggestJobs(body.resumeText, body.location);
   }
 }
 

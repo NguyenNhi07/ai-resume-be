@@ -724,4 +724,181 @@ export class GetResumeScoreListQueryDto extends PaginationQueryDto {
   resumeId: number;
 }
 
+// ****************************** Job Application DTOs ******************************
+
+export class CreateJobApplicationBodyDto {
+  @PropertyDto({
+    type: Number,
+    required: true,
+    validated: true,
+  })
+  resumeId: number;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    example: 'Senior Frontend Developer',
+  })
+  jobTitle: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+    example: 'Google',
+  })
+  companyName?: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    example: 'https://jobs.google.com/...',
+  })
+  jobUrl: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+    example: 'Job description...',
+  })
+  jobDescription?: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+    example: 'Applied',
+  })
+  status?: 'Applied' | 'Interviewing' | 'Offer' | 'Rejected' | 'Withdrawn';
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+  })
+  notes?: string;
+}
+
+export class UpdateJobApplicationBodyDto {
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+    example: 'Interviewing',
+  })
+  status?: 'Applied' | 'Interviewing' | 'Offer' | 'Rejected' | 'Withdrawn';
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+  })
+  notes?: string;
+}
+
+export class JobApplicationResponseDto {
+  @PropertyDto({
+    type: Number,
+    required: true,
+    validated: true,
+  })
+  id: number;
+
+  @PropertyDto({
+    type: Number,
+    required: true,
+    validated: true,
+  })
+  resumeId: number;
+
+  @PropertyDto({
+    type: Number,
+    required: false,
+    validated: true,
+  })
+  userId?: number;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  jobTitle: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+  })
+  companyName?: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  jobUrl: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+  })
+  jobDescription?: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+  })
+  status: string;
+
+  @PropertyDto({
+    type: Date,
+    required: true,
+    validated: true,
+  })
+  appliedAt: Date;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+  })
+  notes?: string;
+
+  @PropertyDto({
+    type: Date,
+    required: true,
+    validated: true,
+  })
+  createdAt: Date;
+
+  @PropertyDto({
+    type: Date,
+    required: true,
+    validated: true,
+  })
+  updatedAt: Date;
+}
+
+export class GetJobApplicationListQueryDto extends PaginationQueryDto {
+  @PropertyDto({
+    type: Number,
+    required: true,
+    validated: true,
+  })
+  resumeId: number;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+  })
+  status?: string;
+}
+
 // ****************************** More Resume dto below ******************************

@@ -9,6 +9,7 @@ import {
   QaItemDto,
   ScoreInterviewAnswersResponseDto,
   ScoreResumeByJDResponseDto,
+  SuggestJobsResponseDto,
   TailorResumeByJDResponseDto,
 } from './dtos';
 
@@ -721,6 +722,138 @@ Now analyze and output ONLY the JSON object described above.
         overallSuggestions: Array.isArray(parsed.overallSuggestions)
           ? parsed.overallSuggestions.map(String)
           : [],
+      };
+
+      return safe;
+    } catch (error: any) {
+      if (error?.status === 503) {
+        throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
+      }
+      if (error?.status === 429) {
+        const errorMessage = error?.message || '';
+        if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
+          throw new Error(
+            'Đã vượt quá giới hạn sử dụng AI miễn phí (20 requests/ngày). Vui lòng thử lại sau 24 giờ hoặc nâng cấp gói dịch vụ.',
+          );
+        }
+        throw new Error('Quá nhiều yêu cầu, vui lòng thử lại sau vài phút.');
+      }
+      throw error;
+    }
+  }
+
+  async suggestJobs(
+    resumeText: string,
+    location?: string,
+  ): Promise<SuggestJobsResponseDto> {
+    if (!this.ai) {
+      throw new Error('GEMINI_API_KEY is not configured');
+    }
+
+    try {
+      const prompt = `
+You are an expert job search assistant. Your task is to find real, current job openings that match the candidate's CV.
+
+LANGUAGE RULE (VERY IMPORTANT):
+- Detect the language of the CV.
+- The output MUST be written in the SAME language as the input.
+- Do NOT translate unless the input is translated.
+
+TASK:
+Based on the candidate's CV, suggest 5-10 real job openings that are currently available online. 
+You should search for jobs on popular job boards like:
+- LinkedIn (linkedin.com/jobs)
+- Indeed (indeed.com)
+- VietnamWorks (vietnamworks.com)
+- TopCV (topcv.vn)
+- ITviec (itviec.com)
+- CareerBuilder (careerbuilder.vn)
+- Glassdoor (glassdoor.com)
+- Monster (monster.com)
+- And other relevant job sites
+
+IMPORTANT:
+- Provide REAL, ACTUAL job posting URLs that exist on the internet
+- The jobs should match the candidate's skills, experience, and career level
+- Include jobs from various sources (LinkedIn, Indeed, company websites, etc.)
+- If location is specified, prioritize jobs in that location
+- Each job must have a valid URL that users can click to apply
+
+OUTPUT FORMAT (STRICT JSON ONLY):
+{
+  "language": string,              // Language of the CV (e.g., "vi", "en")
+  "jobs": [
+    {
+      "jobTitle": string,           // Job title
+      "companyName": string?,       // Company name (optional)
+      "jobUrl": string,             // Direct URL to the job posting (REQUIRED)
+      "jobDescription": string?,   // Brief description (optional)
+      "location": string?,          // Job location (optional)
+      "source": string?             // Source platform (e.g., "LinkedIn", "Indeed") (optional)
+    }
+  ]
+}
+
+RULES:
+- Do NOT include markdown, comments, or explanations outside JSON.
+- Do NOT make up fake URLs - only provide URLs that you know exist or are likely to exist
+- If you cannot find real URLs, you can provide search URLs to job boards with relevant search terms
+- Focus on jobs that match the candidate's profile
+- Prioritize quality over quantity
+
+CANDIDATE CV:
+"""
+${resumeText}
+"""
+
+${location ? `PREFERRED LOCATION: ${location}` : ''}
+
+Now return ONLY the JSON object with real job suggestions.
+`;
+
+      const result: any = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      });
+
+      const response = result?.response ?? result;
+      const rawText =
+        typeof response?.text === 'function'
+          ? response.text()
+          : response?.text ?? '';
+      const text = String(rawText || '').trim();
+
+      let parsed: any;
+      try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const jsonText = jsonMatch ? jsonMatch[0] : text;
+        parsed = JSON.parse(jsonText);
+      } catch (e) {
+        ServerLogger.error({
+          message: 'Failed to parse AI suggestJobs JSON',
+          context: 'AiService.suggestJobs',
+          error: { rawText: text, parseError: (e as any)?.message },
+        });
+        parsed = {
+          language: 'vi',
+          jobs: [],
+        };
+      }
+
+      const jobs = Array.isArray(parsed.jobs) ? parsed.jobs : [];
+
+      const safe: SuggestJobsResponseDto = {
+        language: String(parsed.language || 'vi'),
+        jobs: jobs.map((job: any) => ({
+          jobTitle: String(job.jobTitle || ''),
+          companyName: job.companyName ? String(job.companyName) : undefined,
+          jobUrl: String(job.jobUrl || ''),
+          jobDescription: job.jobDescription
+            ? String(job.jobDescription)
+            : undefined,
+          location: job.location ? String(job.location) : undefined,
+          source: job.source ? String(job.source) : undefined,
+        })),
       };
 
       return safe;

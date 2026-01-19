@@ -401,3 +401,89 @@ export class TailorResumeByJDResponseDto {
   overallSuggestions: string[];
 }
 
+export class SuggestJobsBodyDto {
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    example: 'Full CV content as plain text...',
+  })
+  resumeText: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+    example: 'Vietnam',
+  })
+  location?: string;
+}
+
+export class JobSuggestionDto {
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    example: 'Senior Frontend Developer',
+  })
+  jobTitle: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+    example: 'Google',
+  })
+  companyName?: string;
+
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    example: 'https://jobs.google.com/...',
+  })
+  jobUrl: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+    example: 'Job description...',
+  })
+  jobDescription?: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+    example: 'Ho Chi Minh City, Vietnam',
+  })
+  location?: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+    example: 'LinkedIn, Indeed, etc.',
+  })
+  source?: string;
+}
+
+export class SuggestJobsResponseDto {
+  @PropertyDto({
+    type: String,
+    required: true,
+    validated: true,
+    example: 'vi',
+  })
+  language: string;
+
+  @PropertyDto({
+    type: JobSuggestionDto,
+    required: true,
+    validated: true,
+    structure: 'dtoArray',
+  })
+  jobs: JobSuggestionDto[];
+}
+

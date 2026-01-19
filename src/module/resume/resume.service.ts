@@ -23,6 +23,10 @@ import {
   CreateResumeScoreBodyDto,
   ResumeScoreResponseDto,
   GetResumeScoreListQueryDto,
+  CreateJobApplicationBodyDto,
+  UpdateJobApplicationBodyDto,
+  JobApplicationResponseDto,
+  GetJobApplicationListQueryDto,
 } from './dtos';
 
 @Injectable({ scope: Scope.REQUEST })
@@ -1754,5 +1758,155 @@ export class ResumeService {
         totalPages: Math.ceil(total / pageSize),
       },
     };
+  }
+
+  async createJobApplication(
+    userId: number,
+    body: CreateJobApplicationBodyDto,
+  ): Promise<JobApplicationResponseDto> {
+    // Verify resume belongs to user
+    const resume = await this.databaseService.resume.findFirst({
+      where: { id: body.resumeId, userId, isDeleted: false },
+    });
+
+    if (!resume) {
+      throw new ServerException(ERROR_RESPONSE.RESOURCE_NOT_FOUND);
+    }
+
+    const created = await this.databaseService.jobApplication.create({
+      data: {
+        resumeId: body.resumeId,
+        userId,
+        jobTitle: body.jobTitle,
+        companyName: body.companyName,
+        jobUrl: body.jobUrl,
+        jobDescription: body.jobDescription,
+        status: body.status || 'Applied',
+        notes: body.notes,
+      },
+    });
+
+    return {
+      id: created.id,
+      resumeId: created.resumeId,
+      userId: created.userId,
+      jobTitle: created.jobTitle,
+      companyName: created.companyName,
+      jobUrl: created.jobUrl,
+      jobDescription: created.jobDescription,
+      status: created.status,
+      appliedAt: created.appliedAt,
+      notes: created.notes,
+      createdAt: created.createdAt,
+      updatedAt: created.updatedAt,
+    };
+  }
+
+  async getJobApplicationList(
+    query: GetJobApplicationListQueryDto,
+  ): Promise<PaginationResponseDto<JobApplicationResponseDto>> {
+    const userId = this.getCurrentUserId();
+    const { page, pageSize, take, skip } = validatePaginationQueryDto(query);
+
+    // Verify resume belongs to user
+    const resume = await this.databaseService.resume.findFirst({
+      where: { id: query.resumeId, userId, isDeleted: false },
+    });
+
+    if (!resume) {
+      throw new ServerException(ERROR_RESPONSE.RESOURCE_NOT_FOUND);
+    }
+
+    const where: Prisma.JobApplicationWhereInput = {
+      resumeId: query.resumeId,
+      userId,
+      isDeleted: false,
+      ...(query.status && { status: query.status as any }),
+    };
+
+    const [data, total] = await Promise.all([
+      this.databaseService.jobApplication.findMany({
+        where,
+        take,
+        skip,
+        orderBy: { appliedAt: 'desc' },
+      }),
+      this.databaseService.jobApplication.count({ where }),
+    ]);
+
+    return {
+      data: data.map((item) => ({
+        id: item.id,
+        resumeId: item.resumeId,
+        userId: item.userId,
+        jobTitle: item.jobTitle,
+        companyName: item.companyName,
+        jobUrl: item.jobUrl,
+        jobDescription: item.jobDescription,
+        status: item.status,
+        appliedAt: item.appliedAt,
+        notes: item.notes,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      })),
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    };
+  }
+
+  async updateJobApplication(
+    userId: number,
+    id: number,
+    body: UpdateJobApplicationBodyDto,
+  ): Promise<JobApplicationResponseDto> {
+    const jobApplication = await this.databaseService.jobApplication.findFirst({
+      where: { id, userId, isDeleted: false },
+    });
+
+    if (!jobApplication) {
+      throw new ServerException(ERROR_RESPONSE.RESOURCE_NOT_FOUND);
+    }
+
+    const updated = await this.databaseService.jobApplication.update({
+      where: { id },
+      data: {
+        ...(body.status && { status: body.status as any }),
+        ...(body.notes !== undefined && { notes: body.notes }),
+      },
+    });
+
+    return {
+      id: updated.id,
+      resumeId: updated.resumeId,
+      userId: updated.userId,
+      jobTitle: updated.jobTitle,
+      companyName: updated.companyName,
+      jobUrl: updated.jobUrl,
+      jobDescription: updated.jobDescription,
+      status: updated.status,
+      appliedAt: updated.appliedAt,
+      notes: updated.notes,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+    };
+  }
+
+  async deleteJobApplication(userId: number, id: number): Promise<void> {
+    const jobApplication = await this.databaseService.jobApplication.findFirst({
+      where: { id, userId, isDeleted: false },
+    });
+
+    if (!jobApplication) {
+      throw new ServerException(ERROR_RESPONSE.RESOURCE_NOT_FOUND);
+    }
+
+    await this.databaseService.jobApplication.update({
+      where: { id },
+      data: { isDeleted: true },
+    });
   }
 }

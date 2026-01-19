@@ -96,6 +96,7 @@ model Resume {
   // Relationships
   user User? @relation(fields: [userId], references: [id])
   resumeScores ResumeScore[]
+  jobApplications JobApplication[]
 }
 
 // model Experience {
@@ -205,6 +206,25 @@ model ResumeScore {
   resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 }
 
+model JobApplication {
+  id            Int      @id @default(autoincrement())
+  resumeId      Int
+  userId        Int?
+  jobTitle      String
+  companyName   String?
+  jobUrl        String
+  jobDescription String?
+  status        JobApplicationStatus @default(Applied)
+  appliedAt     DateTime @default(now())
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  isDeleted     Boolean  @default(false)
+
+  // Relationships
+  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+}
+
 // -------------------------------- Enums -------------------------------
 enum UserRole {
   Admin
@@ -301,4 +321,12 @@ enum AuditTrailType {
 
 enum HistoryType {
   Update
+}
+
+enum JobApplicationStatus {
+  Applied
+  Interviewing
+  Offer
+  Rejected
+  Withdrawn
 }
