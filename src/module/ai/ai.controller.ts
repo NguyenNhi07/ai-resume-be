@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { RoleBaseAccessControl, SwaggerApiDocument } from 'src/decorator';
 import { AuthGuard } from 'src/guard';
@@ -18,6 +18,7 @@ import {
   SuggestJobsResponseDto,
   TailorResumeByJDBodyDto,
   TailorResumeByJDResponseDto,
+  GetSavedJobSuggestionsQueryDto,
 } from './dtos';
 
 @Controller('ai')
@@ -118,6 +119,21 @@ export class AiController {
     return this.aiService.tailorResumeByJD(body.resumeText, body.jdText);
   }
 
+  @Get('suggest-jobs/latest')
+  @SwaggerApiDocument({
+    response: { type: SuggestJobsResponseDto },
+    query: { type: GetSavedJobSuggestionsQueryDto, required: true },
+    operation: {
+      operationId: `getSavedJobSuggestions`,
+      summary: `Api getSavedJobSuggestions - Get latest cached job suggestions for resume`,
+    },
+  })
+  async getSavedJobSuggestions(
+    @Query() query: GetSavedJobSuggestionsQueryDto,
+  ): Promise<SuggestJobsResponseDto> {
+    return this.aiService.getSavedJobSuggestions(query.resumeId);
+  }
+
   @Post('suggest-jobs')
   @SwaggerApiDocument({
     response: { type: SuggestJobsResponseDto },
@@ -130,7 +146,12 @@ export class AiController {
   async suggestJobs(
     @Body() body: SuggestJobsBodyDto,
   ): Promise<SuggestJobsResponseDto> {
-    return this.aiService.suggestJobs(body.resumeText, body.location);
+    return this.aiService.suggestJobs(
+      body.resumeText,
+      body.resumeId,
+      body.location,
+      body.forceRefresh,
+    );
   }
 }
 

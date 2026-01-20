@@ -1,7 +1,12 @@
 import { GoogleGenAI } from '@google/genai';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Scope } from '@nestjs/common';
+import { REQUEST } from '@nestjs/core';
+import { Request } from 'express';
 import { ServerConfig } from '@server/config';
 import { ServerLogger } from '@server/logger';
+import { ERROR_RESPONSE } from 'src/common/const';
+import { ServerException } from 'src/exception';
+import { DatabaseService } from 'src/module/base/database';
 import {
   CoverLetterResponseDto,
   GenerateInterviewQuestionsResponseDto,
@@ -13,22 +18,37 @@ import {
   TailorResumeByJDResponseDto,
 } from './dtos';
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class AiService {
+  private static aiClient?: GoogleGenAI;
   private readonly ai?: GoogleGenAI;
 
-  constructor() {
-    const apiKey = ServerConfig.get().GEMINI_API_KEY;
-    if (!apiKey) {
-      ServerLogger.warn({
-        message: 'GEMINI_API_KEY is not set. AI features will not work.',
-        context: 'AiService.constructor',
-      });
-      return;
+  constructor(
+    private readonly databaseService: DatabaseService,
+    @Inject(REQUEST) private readonly request: Request,
+  ) {
+    if (!AiService.aiClient) {
+      const apiKey = ServerConfig.get().GEMINI_API_KEY;
+      if (!apiKey) {
+        ServerLogger.warn({
+          message: 'GEMINI_API_KEY is not set. AI features will not work.',
+          context: 'AiService.constructor',
+        });
+      } else {
+        // SDK mới, dùng endpoint v1
+        AiService.aiClient = new GoogleGenAI({ apiKey });
+      }
     }
 
-    // SDK mới, dùng endpoint v1
-    this.ai = new GoogleGenAI({ apiKey });
+    this.ai = AiService.aiClient;
+  }
+
+  private getCurrentUserId(): number {
+    const userId = (this.request as any)?.user?.id;
+    if (!userId) {
+      throw new ServerException(ERROR_RESPONSE.UNAUTHORIZED);
+    }
+    return Number(userId);
   }
 
   async optimizeText(text: string): Promise<OptimizeTextResponseDto> {
@@ -742,15 +762,88 @@ Now analyze and output ONLY the JSON object described above.
     }
   }
 
+  private mapJobs(jobs: any[]): SuggestJobsResponseDto['jobs'] {
+    const list = Array.isArray(jobs) ? jobs : [];
+    return list.map((job: any) => ({
+      jobTitle: String(job.jobTitle || ''),
+      companyName: job.companyName ? String(job.companyName) : undefined,
+      jobUrl: String(job.jobUrl || ''),
+      jobDescription: job.jobDescription ? String(job.jobDescription) : undefined,
+      location: job.location ? String(job.location) : undefined,
+      source: job.source ? String(job.source) : undefined,
+    }));
+  }
+
+  async getSavedJobSuggestions(resumeId: number): Promise<SuggestJobsResponseDto> {
+    const userId = this.getCurrentUserId();
+
+    const resume = await this.databaseService.resume.findFirst({
+      where: { id: resumeId, userId, isDeleted: false },
+    });
+
+    if (!resume) {
+      throw new ServerException(ERROR_RESPONSE.RESOURCE_NOT_FOUND);
+    }
+
+    const cache = await this.databaseService.jobSuggestionCache.findFirst({
+      where: { resumeId, userId, isDeleted: false },
+    });
+
+    if (!cache) {
+      throw new ServerException(ERROR_RESPONSE.RESOURCE_NOT_FOUND);
+    }
+
+    return {
+      cacheId: cache.id,
+      resumeId: cache.resumeId,
+      language: String(cache.language || 'vi'),
+      location: cache.location || undefined,
+      cachedAt: cache.updatedAt.toISOString(),
+      isFromCache: true,
+      jobs: this.mapJobs(cache.jobs as any[]),
+    };
+  }
+
   async suggestJobs(
     resumeText: string,
+    resumeId: number,
     location?: string,
+    forceRefresh?: boolean,
   ): Promise<SuggestJobsResponseDto> {
     if (!this.ai) {
       throw new Error('GEMINI_API_KEY is not configured');
     }
 
     try {
+      const userId = this.getCurrentUserId();
+      const normalizedLocation = location?.trim();
+
+      const resume = await this.databaseService.resume.findFirst({
+        where: { id: resumeId, userId, isDeleted: false },
+      });
+
+      if (!resume) {
+        throw new ServerException(ERROR_RESPONSE.RESOURCE_NOT_FOUND);
+      }
+
+      if (!forceRefresh) {
+        const cached = await this.databaseService.jobSuggestionCache.findFirst({
+          where: { resumeId, userId, isDeleted: false },
+        });
+
+        if (cached) {
+          return {
+            cacheId: cached.id,
+            resumeId: cached.resumeId,
+            language: String(cached.language || 'vi'),
+            location: cached.location || undefined,
+            cachedAt: cached.updatedAt.toISOString(),
+            isFromCache: true,
+            jobs: this.mapJobs(cached.jobs as any[]),
+          };
+        }
+      }
+
       const prompt = `
 You are an expert job search assistant. Your task is to find real, current job openings that match the candidate's CV.
 
@@ -843,20 +936,37 @@ Now return ONLY the JSON object with real job suggestions.
       const jobs = Array.isArray(parsed.jobs) ? parsed.jobs : [];
 
       const safe: SuggestJobsResponseDto = {
+        cacheId: 0,
+        resumeId,
         language: String(parsed.language || 'vi'),
-        jobs: jobs.map((job: any) => ({
-          jobTitle: String(job.jobTitle || ''),
-          companyName: job.companyName ? String(job.companyName) : undefined,
-          jobUrl: String(job.jobUrl || ''),
-          jobDescription: job.jobDescription
-            ? String(job.jobDescription)
-            : undefined,
-          location: job.location ? String(job.location) : undefined,
-          source: job.source ? String(job.source) : undefined,
-        })),
+        location: normalizedLocation || undefined,
+        jobs: this.mapJobs(jobs),
       };
 
-      return safe;
+      const stored = await this.databaseService.jobSuggestionCache.upsert({
+        where: { resumeId },
+        update: {
+          userId,
+          language: safe.language,
+          location: normalizedLocation || null,
+          jobs: safe.jobs,
+          isDeleted: false,
+        },
+        create: {
+          resumeId,
+          userId,
+          language: safe.language,
+          location: normalizedLocation || null,
+          jobs: safe.jobs,
+        },
+      });
+
+      return {
+        ...safe,
+        cacheId: stored.id,
+        cachedAt: stored.updatedAt.toISOString(),
+        isFromCache: false,
+      };
     } catch (error: any) {
       if (error?.status === 503) {
         throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');

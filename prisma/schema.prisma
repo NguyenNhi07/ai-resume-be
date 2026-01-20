@@ -225,6 +225,22 @@ model JobApplication {
   resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 }
 
+model JobSuggestionCache {
+  id        Int      @id @default(autoincrement())
+  resumeId  Int
+  userId    Int?
+  language  String?
+  location  String?
+  jobs      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isDeleted Boolean  @default(false)
+
+  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@unique([resumeId])
+}
+
 // -------------------------------- Enums -------------------------------
 enum UserRole {
   Admin

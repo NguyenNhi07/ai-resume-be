@@ -411,12 +411,28 @@ export class SuggestJobsBodyDto {
   resumeText: string;
 
   @PropertyDto({
+    type: Number,
+    required: true,
+    validated: true,
+    example: 123,
+  })
+  resumeId: number;
+
+  @PropertyDto({
     type: String,
     required: false,
     validated: true,
     example: 'Vietnam',
   })
   location?: string;
+
+  @PropertyDto({
+    type: Boolean,
+    required: false,
+    validated: true,
+    example: false,
+  })
+  forceRefresh?: boolean;
 }
 
 export class JobSuggestionDto {
@@ -479,11 +495,61 @@ export class SuggestJobsResponseDto {
   language: string;
 
   @PropertyDto({
+    type: Number,
+    required: true,
+    validated: true,
+    example: 1,
+  })
+  resumeId: number;
+
+  @PropertyDto({
+    type: Number,
+    required: true,
+    validated: true,
+    example: 10,
+  })
+  cacheId: number;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+    example: 'Ho Chi Minh City, Vietnam',
+  })
+  location?: string;
+
+  @PropertyDto({
+    type: String,
+    required: false,
+    validated: true,
+    example: '2026-01-20T00:00:00.000Z',
+  })
+  cachedAt?: string;
+
+  @PropertyDto({
+    type: Boolean,
+    required: false,
+    validated: true,
+    example: true,
+  })
+  isFromCache?: boolean;
+
+  @PropertyDto({
     type: JobSuggestionDto,
     required: true,
     validated: true,
     structure: 'dtoArray',
   })
   jobs: JobSuggestionDto[];
+}
+
+export class GetSavedJobSuggestionsQueryDto {
+  @PropertyDto({
+    type: Number,
+    required: true,
+    validated: true,
+    example: 123,
+  })
+  resumeId: number;
 }
 
