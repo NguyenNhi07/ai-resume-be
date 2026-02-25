@@ -1,9 +1,10 @@
 import { GoogleGenAI } from '@google/genai';
-import { Inject, Injectable, Scope } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, Scope } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
-import { Request } from 'express';
+import { Prisma } from '@prisma/client';
 import { ServerConfig } from '@server/config';
 import { ServerLogger } from '@server/logger';
+import { Request } from 'express';
 import { ERROR_RESPONSE } from 'src/common/const';
 import { ServerException } from 'src/exception';
 import { DatabaseService } from 'src/module/base/database';
@@ -41,6 +42,27 @@ export class AiService {
     }
 
     this.ai = AiService.aiClient;
+  }
+
+  private handleAiError(error: any): never {
+    if (error?.status === 503) {
+      throw new HttpException(
+        'Dịch vụ AI đang quá tải, vui lòng thử lại sau vài giây.',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
+    if (error?.status === 429) {
+      const errorMessage = String(error?.message || '');
+      const isQuotaError = errorMessage.toLowerCase().includes('quota');
+      const message = isQuotaError
+        ? 'Đã vượt quá giới hạn/quota của Gemini API. Vui lòng thử lại sau hoặc kiểm tra quota trong Google AI Studio / Google Cloud.'
+        : 'Quá nhiều yêu cầu đến Gemini API trong thời gian ngắn, vui lòng thử lại sau vài phút.';
+
+      throw new HttpException(message, HttpStatus.TOO_MANY_REQUESTS);
+    }
+
+    throw error;
   }
 
   private getCurrentUserId(): number {
@@ -100,19 +122,7 @@ Return ONLY the optimized text.
 
       return { optimizedText };
     } catch (error: any) {
-      if (error?.status === 503) {
-        throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
-      }
-      if (error?.status === 429) {
-        const errorMessage = error?.message || '';
-        if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
-          throw new Error(
-            'Đã vượt quá giới hạn sử dụng AI miễn phí (20 requests/ngày). Vui lòng thử lại sau 24 giờ hoặc nâng cấp gói dịch vụ.',
-          );
-        }
-        throw new Error('Quá nhiều yêu cầu, vui lòng thử lại sau vài phút.');
-      }
-      throw error;
+      this.handleAiError(error);
     }
   }
 
@@ -218,19 +228,7 @@ Now return ONLY the JSON object.
 
       return safe;
     } catch (error: any) {
-      if (error?.status === 503) {
-        throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
-      }
-      if (error?.status === 429) {
-        const errorMessage = error?.message || '';
-        if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
-          throw new Error(
-            'Đã vượt quá giới hạn sử dụng AI miễn phí (20 requests/ngày). Vui lòng thử lại sau 24 giờ hoặc nâng cấp gói dịch vụ.',
-          );
-        }
-        throw new Error('Quá nhiều yêu cầu, vui lòng thử lại sau vài phút.');
-      }
-      throw error;
+      this.handleAiError(error);
     }
   }
 
@@ -322,19 +320,7 @@ Now generate the cover letter and return ONLY the JSON object.`;
         coverLetter,
       };
     } catch (error: any) {
-      if (error?.status === 503) {
-        throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
-      }
-      if (error?.status === 429) {
-        const errorMessage = error?.message || '';
-        if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
-          throw new Error(
-            'Đã vượt quá giới hạn sử dụng AI miễn phí (20 requests/ngày). Vui lòng thử lại sau 24 giờ hoặc nâng cấp gói dịch vụ.',
-          );
-        }
-        throw new Error('Quá nhiều yêu cầu, vui lòng thử lại sau vài phút.');
-      }
-      throw error;
+      this.handleAiError(error);
     }
   }
 
@@ -450,19 +436,7 @@ Now analyze and output ONLY the JSON object described above.
 
       return safe;
     } catch (error: any) {
-      if (error?.status === 503) {
-        throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
-      }
-      if (error?.status === 429) {
-        const errorMessage = error?.message || '';
-        if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
-          throw new Error(
-            'Đã vượt quá giới hạn sử dụng AI miễn phí (20 requests/ngày). Vui lòng thử lại sau 24 giờ hoặc nâng cấp gói dịch vụ.',
-          );
-        }
-        throw new Error('Quá nhiều yêu cầu, vui lòng thử lại sau vài phút.');
-      }
-      throw error;
+      this.handleAiError(error);
     }
   }
 
@@ -586,19 +560,7 @@ Now analyze and output ONLY the JSON object described above.
 
       return safe;
     } catch (error: any) {
-      if (error?.status === 503) {
-        throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
-      }
-      if (error?.status === 429) {
-        const errorMessage = error?.message || '';
-        if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
-          throw new Error(
-            'Đã vượt quá giới hạn sử dụng AI miễn phí (20 requests/ngày). Vui lòng thử lại sau 24 giờ hoặc nâng cấp gói dịch vụ.',
-          );
-        }
-        throw new Error('Quá nhiều yêu cầu, vui lòng thử lại sau vài phút.');
-      }
-      throw error;
+      this.handleAiError(error);
     }
   }
 
@@ -746,19 +708,7 @@ Now analyze and output ONLY the JSON object described above.
 
       return safe;
     } catch (error: any) {
-      if (error?.status === 503) {
-        throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
-      }
-      if (error?.status === 429) {
-        const errorMessage = error?.message || '';
-        if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
-          throw new Error(
-            'Đã vượt quá giới hạn sử dụng AI miễn phí (20 requests/ngày). Vui lòng thử lại sau 24 giờ hoặc nâng cấp gói dịch vụ.',
-          );
-        }
-        throw new Error('Quá nhiều yêu cầu, vui lòng thử lại sau vài phút.');
-      }
-      throw error;
+      this.handleAiError(error);
     }
   }
 
@@ -845,7 +795,7 @@ Now analyze and output ONLY the JSON object described above.
       }
 
       const prompt = `
-You are an expert job search assistant. Your task is to find real, current job openings that match the candidate's CV.
+You are an expert job search assistant. Your task is to help the candidate quickly reach job listings that are still available and whose links are working.
 
 LANGUAGE RULE (VERY IMPORTANT):
 - Detect the language of the CV.
@@ -853,7 +803,7 @@ LANGUAGE RULE (VERY IMPORTANT):
 - Do NOT translate unless the input is translated.
 
 TASK:
-Based on the candidate's CV, suggest 5-10 real job openings that are currently available online. 
+Based on the candidate's CV, suggest 5-10 VERY RELEVANT job opportunities.
 You should search for jobs on popular job boards like:
 - LinkedIn (linkedin.com/jobs)
 - Indeed (indeed.com)
@@ -865,22 +815,27 @@ You should search for jobs on popular job boards like:
 - Monster (monster.com)
 - And other relevant job sites
 
-IMPORTANT:
-- Provide REAL, ACTUAL job posting URLs that exist on the internet
-- The jobs should match the candidate's skills, experience, and career level
-- Include jobs from various sources (LinkedIn, Indeed, company websites, etc.)
-- If location is specified, prioritize jobs in that location
-- Each job must have a valid URL that users can click to apply
+IMPORTANT (STABILITY OF LINKS):
+- Prefer URLs that are search result pages or filtered listings on trusted job boards instead of deep links to a single posting, because single postings often expire.
+- Every \`jobUrl\` MUST be a URL that is expected to work even after some time (for example:
+  - https://www.linkedin.com/jobs/search/?keywords=<KEYWORDS>&location=<LOCATION>
+  - https://www.indeed.com/jobs?q=<KEYWORDS>&l=<LOCATION>
+  - https://www.topcv.vn/tim-viec-lam/<SLUG>
+  - https://www.vietnamworks.com/<SLUG>
+  - or similar search URLs on other boards).
+- Do NOT invent random, fake, or obviously invalid paths.
+- The jobs should match the candidate's skills, experience, and career level.
+- If location is specified, prioritize search URLs filtered by that location.
 
 OUTPUT FORMAT (STRICT JSON ONLY):
 {
   "language": string,              // Language of the CV (e.g., "vi", "en")
   "jobs": [
     {
-      "jobTitle": string,           // Job title
-      "companyName": string?,       // Company name (optional)
-      "jobUrl": string,             // Direct URL to the job posting (REQUIRED)
-      "jobDescription": string?,   // Brief description (optional)
+      "jobTitle": string,           // Job title or role this search is targeting
+      "companyName": string?,       // Company name if you are pointing to a specific company’s career page
+      "jobUrl": string,             // URL to a working job search / listing page (REQUIRED)
+      "jobDescription": string?,    // Brief description of what the user will find at this URL
       "location": string?,          // Job location (optional)
       "source": string?             // Source platform (e.g., "LinkedIn", "Indeed") (optional)
     }
@@ -889,10 +844,10 @@ OUTPUT FORMAT (STRICT JSON ONLY):
 
 RULES:
 - Do NOT include markdown, comments, or explanations outside JSON.
-- Do NOT make up fake URLs - only provide URLs that you know exist or are likely to exist
-- If you cannot find real URLs, you can provide search URLs to job boards with relevant search terms
-- Focus on jobs that match the candidate's profile
-- Prioritize quality over quantity
+- Do NOT make up fake URLs or obviously broken domains.
+- ALWAYS prefer stable search/listing URLs on real job boards (as described above) instead of deep links to single postings that may expire.
+- Focus on jobs that match the candidate's profile.
+- Prioritize quality and relevance over quantity.
 
 CANDIDATE CV:
 """
@@ -901,7 +856,7 @@ ${resumeText}
 
 ${location ? `PREFERRED LOCATION: ${location}` : ''}
 
-Now return ONLY the JSON object with real job suggestions.
+Now return ONLY the JSON object with job suggestions.
 `;
 
       const result: any = await this.ai.models.generateContent({
@@ -911,9 +866,7 @@ Now return ONLY the JSON object with real job suggestions.
 
       const response = result?.response ?? result;
       const rawText =
-        typeof response?.text === 'function'
-          ? response.text()
-          : response?.text ?? '';
+        typeof response?.text === 'function' ? response.text() : (response?.text ?? '');
       const text = String(rawText || '').trim();
 
       let parsed: any;
@@ -949,7 +902,7 @@ Now return ONLY the JSON object with real job suggestions.
           userId,
           language: safe.language,
           location: normalizedLocation || null,
-          jobs: safe.jobs,
+          jobs: safe.jobs as unknown as Prisma.InputJsonValue,
           isDeleted: false,
         },
         create: {
@@ -957,7 +910,7 @@ Now return ONLY the JSON object with real job suggestions.
           userId,
           language: safe.language,
           location: normalizedLocation || null,
-          jobs: safe.jobs,
+          jobs: safe.jobs as unknown as Prisma.InputJsonValue,
         },
       });
 
@@ -968,19 +921,7 @@ Now return ONLY the JSON object with real job suggestions.
         isFromCache: false,
       };
     } catch (error: any) {
-      if (error?.status === 503) {
-        throw new Error('AI đang quá tải, vui lòng thử lại sau vài giây.');
-      }
-      if (error?.status === 429) {
-        const errorMessage = error?.message || '';
-        if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
-          throw new Error(
-            'Đã vượt quá giới hạn sử dụng AI miễn phí (20 requests/ngày). Vui lòng thử lại sau 24 giờ hoặc nâng cấp gói dịch vụ.',
-          );
-        }
-        throw new Error('Quá nhiều yêu cầu, vui lòng thử lại sau vài phút.');
-      }
-      throw error;
+      this.handleAiError(error);
     }
   }
 }

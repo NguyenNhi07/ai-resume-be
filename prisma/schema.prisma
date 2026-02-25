@@ -97,6 +97,7 @@ model Resume {
   user User? @relation(fields: [userId], references: [id])
   resumeScores ResumeScore[]
   jobApplications JobApplication[]
+  jobSuggestionCache JobSuggestionCache?
 }
 
 // model Experience {
