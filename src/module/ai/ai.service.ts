@@ -4,6 +4,7 @@ import { REQUEST } from '@nestjs/core';
 import { Prisma } from '@prisma/client';
 import { ServerConfig } from '@server/config';
 import { ServerLogger } from '@server/logger';
+import axios from 'axios';
 import { Request } from 'express';
 import { ERROR_RESPONSE } from 'src/common/const';
 import { ServerException } from 'src/exception';
@@ -83,30 +84,29 @@ export class AiService {
 You are a professional resume writing assistant.
 
 Task:
-Improve and optimize the following text to make it more professional, concise, and impactful.
+Rewrite and polish the following text to make it more professional, concise, and impactful.
 
-IMPORTANT:
-- The output MUST be in the SAME LANGUAGE as the input text
-- Do NOT translate unless the input itself is translated
-- You CAN add relevant information, achievements, skills, or details that would make the text more impressive and professional
-- Be creative and enhance the content to make it stand out
+CRITICAL RULES (DO NOT BREAK):
+- The output MUST be in the SAME LANGUAGE as the input text.
+- Do NOT translate unless the input itself is translated.
+- Do NOT add new sections, headings, bullet lists, or categories (for example: do NOT add "Skills", "Experience", "Achievements", etc.).
+- Do NOT expand this into a full CV. Only rewrite and improve the SINGLE paragraph / block that is provided.
+- Keep the meaning and scope of the original text. You may slightly clarify or tighten it, but do NOT introduce entirely new stories, projects, or roles.
 
 Guidelines:
-- Use professional and formal language
-- Be concise and clear
-- Highlight achievements and skills (you can add realistic achievements if they fit the context)
-- Use strong action verbs
-- Enhance the content with relevant details that would strengthen the profile
-- Add specific metrics, numbers, or accomplishments when appropriate
-- Ensure correct grammar and structure
-- Make the text more compelling and competitive
+- Use professional and formal language.
+- Be concise and clear.
+- Improve word choice and sentence structure.
+- Highlight the strengths that are ALREADY mentioned in the original text (do NOT invent new ones).
+- Fix grammar and punctuation.
+- Make the text sound like a strong, polished professional summary paragraph.
 
 Original text:
 """
 ${text}
 """
 
-Return ONLY the optimized text.
+Return ONLY the rewritten text, as a single coherent paragraph (you may use 1–2 short paragraphs if really needed), with NO markdown, NO headings, and NO bullet points.
 `;
 
       const result: any = await this.ai.models.generateContent({
@@ -724,6 +724,77 @@ Now analyze and output ONLY the JSON object described above.
     }));
   }
 
+  /**
+   * Validate job URL is accessible (not 404/dead).
+   * Uses HEAD request with timeout. Returns true if 2xx/3xx, false otherwise.
+   */
+  private async isJobUrlAccessible(url: string): Promise<boolean> {
+    const trimmed = String(url || '').trim();
+    if (!trimmed || (!trimmed.startsWith('http://') && !trimmed.startsWith('https://'))) {
+      return false;
+    }
+    try {
+      const res = await axios.head(trimmed, {
+        timeout: 5000,
+        maxRedirects: 5,
+        validateStatus: () => true, // don't throw on any status
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+      });
+      const status = res.status;
+      // 2xx = OK, 3xx = redirect (target may still work)
+      if (status >= 200 && status < 400) return true;
+      // Some sites return 405 for HEAD; try GET as fallback
+      if (status === 405) {
+        const getRes = await axios.get(trimmed, {
+          timeout: 5000,
+          maxRedirects: 5,
+          validateStatus: () => true,
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+          maxContentLength: 1024 * 100, // only read first ~100KB
+        });
+        return getRes.status >= 200 && getRes.status < 400;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Filter out jobs whose URLs return 404 or are inaccessible.
+   */
+  private async filterAccessibleJobUrls<T extends { jobUrl: string }>(
+    jobs: T[],
+  ): Promise<T[]> {
+    const results = await Promise.allSettled(
+      jobs.map(async (job) => ({
+        job,
+        ok: await this.isJobUrlAccessible(job.jobUrl),
+      })),
+    );
+    const filtered: T[] = [];
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      const job = jobs[i];
+      if (r.status === 'fulfilled' && r.value.ok) {
+        filtered.push(job);
+      } else if (r.status === 'fulfilled' && !r.value.ok) {
+        ServerLogger.debug({
+          message: 'Filtered out inaccessible job URL',
+          context: 'AiService.filterAccessibleJobUrls',
+          meta: { jobUrl: job?.jobUrl },
+        });
+      }
+    }
+    return filtered;
+  }
+
   async getSavedJobSuggestions(resumeId: number): Promise<SuggestJobsResponseDto> {
     const userId = this.getCurrentUserId();
 
@@ -887,13 +958,17 @@ Now return ONLY the JSON object with job suggestions.
       }
 
       const jobs = Array.isArray(parsed.jobs) ? parsed.jobs : [];
+      const mappedJobs = this.mapJobs(jobs);
+
+      // Filter out jobs with dead/404 URLs before returning and caching
+      const accessibleJobs = await this.filterAccessibleJobUrls(mappedJobs);
 
       const safe: SuggestJobsResponseDto = {
         cacheId: 0,
         resumeId,
         language: String(parsed.language || 'vi'),
         location: normalizedLocation || undefined,
-        jobs: this.mapJobs(jobs),
+        jobs: accessibleJobs,
       };
 
       const stored = await this.databaseService.jobSuggestionCache.upsert({
